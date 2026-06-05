@@ -30,6 +30,16 @@ function AppContent() {
   const { data: notifData } = useNotifications();
   const unreadCount = notifData?.unreadCount || 0;
 
+  // Lock body scroll when admin panel is open
+  useEffect(() => {
+    if (showAdmin) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [showAdmin]);
+
   // Refresh user data periodically
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -76,10 +86,11 @@ function AppContent() {
 
   return (
     <div className="min-h-screen crypto-bg crypto-grid crypto-nebula">
-      <div className="relative z-10">
+      {/* Hide main content when admin panel is open to prevent ghost/overlap */}
+      <div className={`relative z-10 ${showAdmin ? 'invisible' : ''}`}>
         {renderPage()}
       </div>
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} unreadCount={unreadCount} />
+      {!showAdmin && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} unreadCount={unreadCount} />}
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} />
       <AdminPanel isOpen={showAdmin} onClose={() => setShowAdmin(false)} />
     </div>

@@ -34,11 +34,11 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, x: '100%' }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: '100%' }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="fixed inset-0 z-[95] flex flex-col admin-panel-bg"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[95] flex flex-col admin-panel-bg overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 admin-header-border relative">
