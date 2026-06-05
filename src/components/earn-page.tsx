@@ -2,9 +2,9 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, Clock, ExternalLink, CheckCircle2, Zap } from 'lucide-react';
+import { Eye, ExternalLink, CheckCircle2, Zap } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { useTasks, useCompleteTask, useWatchAdEarn, useAds } from '@/hooks/use-app-data';
+import { useTasks, useCompleteTask, useWatchAdEarn } from '@/hooks/use-app-data';
 import { Button } from '@/components/ui/button';
 import { AdBanner } from './ad-banner';
 
@@ -17,7 +17,6 @@ export function EarnPage() {
   const [adCountdown, setAdCountdown] = useState(5);
   const [adReward, setAdReward] = useState<number | null>(null);
 
-  // Get daily ad limit from settings
   const dailyLimit = 2;
   const today = new Date().toISOString().split('T')[0];
   const adViewsToday = user?.lastAdViewDate === today ? (user?.adViewsToday ?? 0) : 0;
@@ -28,13 +27,9 @@ export function EarnPage() {
     setShowAdOverlay(true);
     setAdCountdown(5);
     setAdReward(null);
-
     const interval = setInterval(() => {
       setAdCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
+        if (prev <= 1) { clearInterval(interval); return 0; }
         return prev - 1;
       });
     }, 1000);
@@ -49,31 +44,20 @@ export function EarnPage() {
         adViewsToday: adViewsToday + 1,
         lastAdViewDate: today,
       });
-      setTimeout(() => {
-        setShowAdOverlay(false);
-        setAdReward(null);
-      }, 1500);
-    } catch {
-      setShowAdOverlay(false);
-    }
+      setTimeout(() => { setShowAdOverlay(false); setAdReward(null); }, 1500);
+    } catch { setShowAdOverlay(false); }
   }, [watchAdEarn, user, adViewsToday, today, updateUser]);
 
   React.useEffect(() => {
-    if (adCountdown === 0 && showAdOverlay && adReward === null) {
-      handleAdComplete();
-    }
+    if (adCountdown === 0 && showAdOverlay && adReward === null) handleAdComplete();
   }, [adCountdown, showAdOverlay, adReward, handleAdComplete]);
 
   const handleCompleteTask = async (taskId: string) => {
-    try {
-      await completeTask.mutateAsync(taskId);
-    } catch {
-      // handled by mutation
-    }
+    try { await completeTask.mutateAsync(taskId); } catch { /* handled */ }
   };
 
   return (
-    <div className="pb-20 px-4 pt-4 space-y-4 max-w-lg mx-auto">
+    <div className="pb-20 px-4 pt-5 space-y-4 max-w-lg mx-auto">
       {/* Ad overlay */}
       <AnimatePresence>
         {showAdOverlay && (
@@ -81,35 +65,38 @@ export function EarnPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-[#0A0F1C] flex flex-col items-center justify-center p-6"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6"
+            style={{ background: 'radial-gradient(circle at center, #060A14, #030508)' }}
           >
             <div className="text-center space-y-6">
-              <div className="w-20 h-20 rounded-2xl bg-[#2563EB]/20 flex items-center justify-center mx-auto">
-                <Eye className="w-10 h-10 text-[#2563EB]" />
+              <div
+                className="w-24 h-24 rounded-2xl flex items-center justify-center mx-auto"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(239,68,68,0.15))',
+                  boxShadow: '0 0 40px rgba(245,158,11,0.15)',
+                }}
+              >
+                <Eye className="w-12 h-12 text-[#F59E0B]" />
               </div>
-
               {adReward !== null ? (
-                <motion.div
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="space-y-2"
-                >
-                  <p className="text-2xl font-bold text-white">+{adReward} NXR</p>
-                  <p className="text-muted-foreground">Reward earned!</p>
+                <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-2">
+                  <p className="text-3xl font-black text-gradient-gold">+{adReward} NXR</p>
+                  <p className="text-muted-foreground text-sm">Reward earned!</p>
                 </motion.div>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-white">Watching Ad...</h3>
-                    <p className="text-muted-foreground text-sm">Please wait to earn your reward</p>
+                    <h3 className="text-lg font-bold text-white">Watching Ad...</h3>
+                    <p className="text-muted-foreground/60 text-sm">Please wait to earn your reward</p>
                   </div>
-                  <div className="text-5xl font-bold text-[#2563EB]">{adCountdown}</div>
-                  <div className="w-48 h-1.5 bg-secondary rounded-full mx-auto overflow-hidden">
+                  <div className="text-6xl font-black text-gradient-blue">{adCountdown}</div>
+                  <div className="w-52 h-1.5 bg-secondary/50 rounded-full mx-auto overflow-hidden">
                     <motion.div
                       initial={{ width: '100%' }}
                       animate={{ width: '0%' }}
                       transition={{ duration: 5, ease: 'linear' }}
-                      className="h-full bg-[#2563EB] rounded-full"
+                      className="h-full rounded-full"
+                      style={{ background: 'linear-gradient(90deg, #3B82F6, #8B5CF6)' }}
                     />
                   </div>
                 </>
@@ -119,112 +106,121 @@ export function EarnPage() {
         )}
       </AnimatePresence>
 
-      {/* Section 1: Watch Ad & Earn */}
+      {/* Watch Ad & Earn */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl p-5 bg-card border border-border"
+        className="rounded-2xl p-5 hyper-card-glow"
       >
-        <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
-          <Eye className="w-4 h-4 text-[#F59E0B]" />
-          Watch Ad & Earn
-        </h3>
-
-        <div className="text-center space-y-3">
-          <Button
-            onClick={handleWatchAd}
-            disabled={viewsRemaining <= 0 || watchAdEarn.isPending}
-            className="bg-gradient-to-r from-[#F59E0B] to-[#EF4444] hover:opacity-90 text-white px-6 py-5 text-base font-semibold"
-          >
-            {viewsRemaining <= 0 ? (
-              'Daily Limit Reached'
-            ) : (
-              <>
-                <Eye className="w-5 h-5 mr-2" />
-                Watch Ad
-              </>
-            )}
-          </Button>
-          <div className="flex items-center justify-center gap-4 text-sm">
-            <span className="text-[#F59E0B] font-medium">+5 NXR per view</span>
-            <span className="text-muted-foreground">
-              {adViewsToday}/{dailyLimit} views today
-            </span>
+        <div className="relative z-10">
+          <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-wider">
+            <Eye className="w-4 h-4 text-[#F59E0B]" />
+            Watch Ad & Earn
+          </h3>
+          <div className="text-center space-y-3">
+            <Button
+              onClick={handleWatchAd}
+              disabled={viewsRemaining <= 0 || watchAdEarn.isPending}
+              className="px-8 py-5 text-base font-bold rounded-xl text-white"
+              style={{
+                background: viewsRemaining <= 0
+                  ? 'rgba(100,116,139,0.2)'
+                  : 'linear-gradient(135deg, #F59E0B, #EF4444)',
+                boxShadow: viewsRemaining <= 0 ? 'none' : '0 4px 20px rgba(245,158,11,0.3)',
+              }}
+            >
+              {viewsRemaining <= 0 ? 'Daily Limit Reached' : (<><Eye className="w-5 h-5 mr-2" />Watch Ad</>)}
+            </Button>
+            <div className="flex items-center justify-center gap-4 text-sm">
+              <span className="text-[#F59E0B] font-bold">+5 NXR per view</span>
+              <span className="text-muted-foreground/50">{adViewsToday}/{dailyLimit} today</span>
+            </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Section 2: Social Tasks */}
+      {/* Social Tasks */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="rounded-2xl p-5 bg-card border border-border"
+        transition={{ delay: 0.08 }}
+        className="rounded-2xl p-5 hyper-card"
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-white flex items-center gap-2">
-            <Zap className="w-4 h-4 text-[#2563EB]" />
+          <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+            <Zap className="w-4 h-4 text-[#3B82F6]" />
             Social Tasks
           </h3>
           {tasksData && (
-            <span className="text-xs text-muted-foreground">
-              {tasksData.completedCount}/{tasksData.totalCount} completed
+            <span className="text-[10px] text-muted-foreground/50 font-bold">
+              {tasksData.completedCount}/{tasksData.totalCount}
             </span>
           )}
         </div>
 
         {tasksLoading ? (
           <div className="flex justify-center py-8">
-            <div className="w-6 h-6 border-2 border-[#2563EB]/30 border-t-[#2563EB] rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[#3B82F6]/20 border-t-[#3B82F6] rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {tasksData?.tasks?.map((task: {
-              id: string;
-              title: string;
-              description: string;
-              url: string;
-              nxrReward: number;
-              vaultReward: number;
-              completed: boolean;
+              id: string; title: string; description: string; url: string;
+              nxrReward: number; vaultReward: number; completed: boolean;
             }) => (
               <div
                 key={task.id}
-                className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 ${
                   task.completed
-                    ? 'bg-green-500/5 border-green-500/20'
-                    : 'bg-secondary/50 border-border card-hover'
+                    ? 'opacity-50'
+                    : ''
                 }`}
+                style={{
+                  background: task.completed
+                    ? 'rgba(34,197,94,0.03)'
+                    : 'linear-gradient(145deg, rgba(8,12,24,0.6), rgba(15,27,54,0.4))',
+                  borderColor: task.completed ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.08)',
+                }}
               >
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${task.completed ? 'text-muted-foreground line-through' : 'text-white'}`}>
+                  <p className={`text-sm font-semibold ${task.completed ? 'text-muted-foreground line-through' : 'text-white'}`}>
                     {task.title}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">{task.description}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-[#2563EB] font-medium">+{task.nxrReward} NXR</span>
-                    <span className="text-xs text-[#F59E0B] font-medium">+${task.vaultReward.toFixed(2)} Vault</span>
+                  <p className="text-[11px] text-muted-foreground/50 truncate">{task.description}</p>
+                  <div className="flex items-center gap-2.5 mt-1.5">
+                    <span
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                      style={{ background: 'rgba(59,130,246,0.1)', color: '#60A5FA' }}
+                    >
+                      +{task.nxrReward} NXR
+                    </span>
+                    <span
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                      style={{ background: 'rgba(245,158,11,0.1)', color: '#F59E0B' }}
+                    >
+                      +${task.vaultReward.toFixed(2)} Vault
+                    </span>
                   </div>
                 </div>
                 {task.completed ? (
-                  <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
+                  <CheckCircle2 className="w-6 h-6 text-green-500/60 flex-shrink-0" />
                 ) : (
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     {task.url && (
                       <a
                         href={task.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+                        className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground/50 hover:text-white transition-colors"
                       >
-                        <ExternalLink className="w-4 h-4" />
+                        <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     )}
                     <Button
                       size="sm"
                       onClick={() => handleCompleteTask(task.id)}
                       disabled={completeTask.isPending}
-                      className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs px-3 h-8"
+                      className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs px-3 h-8 font-bold rounded-lg"
                     >
                       Go
                     </Button>
@@ -236,7 +232,6 @@ export function EarnPage() {
         )}
       </motion.div>
 
-      {/* Ad Banner */}
       <AdBanner position="earn_banner" />
     </div>
   );

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 
 interface CountdownTimerProps {
-  endsAt: string; // ISO date string
+  endsAt: string;
   onComplete: () => void;
 }
 
@@ -46,19 +46,19 @@ export function CountdownTimer({ endsAt, onComplete }: CountdownTimerProps) {
   if (isComplete) {
     return (
       <div className="text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#2563EB]/20 border border-[#2563EB]/30 mb-3">
-          <span className="text-[#2563EB] text-sm font-medium">✨ Ready to Claim!</span>
+        <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#3B82F6]/15 border border-[#3B82F6]/25">
+          <span className="text-gradient-blue text-sm font-bold">Ready to Claim!</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-2.5">
       <TimeBlock value={pad(timeLeft.hours)} label="HRS" />
-      <span className="text-2xl font-bold text-muted-foreground mb-4">:</span>
+      <span className="text-xl font-bold text-[#3B82F6]/40 mb-5 animate-pulse">:</span>
       <TimeBlock value={pad(timeLeft.minutes)} label="MIN" />
-      <span className="text-2xl font-bold text-muted-foreground mb-4">:</span>
+      <span className="text-xl font-bold text-[#3B82F6]/40 mb-5 animate-pulse">:</span>
       <TimeBlock value={pad(timeLeft.seconds)} label="SEC" />
     </div>
   );
@@ -67,10 +67,10 @@ export function CountdownTimer({ endsAt, onComplete }: CountdownTimerProps) {
 function TimeBlock({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center">
-      <div className="bg-secondary border border-border rounded-xl px-3 py-2 min-w-[56px]">
-        <span className="text-2xl font-bold text-white font-mono">{value}</span>
+      <div className="countdown-digit rounded-xl px-3.5 py-2.5 min-w-[58px]">
+        <span className="text-2xl font-bold text-white font-mono tracking-wider">{value}</span>
       </div>
-      <span className="text-[10px] text-muted-foreground mt-1 font-medium">{label}</span>
+      <span className="text-[9px] text-muted-foreground/60 mt-1.5 font-bold uppercase tracking-widest">{label}</span>
     </div>
   );
 }
