@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LayoutDashboard, Users, ListTodo, Megaphone, Gift, Shield, Settings, Image, Save, Trash2, Ban, CheckCircle, Plus, ToggleLeft, ToggleRight, Send, TrendingUp, Activity, Crown, Zap, Eye, ChevronRight } from 'lucide-react';
+import { X, LayoutDashboard, Users, ListTodo, Megaphone, Gift, Shield, Settings, Image, Save, Trash2, Ban, CheckCircle, Plus, ToggleLeft, ToggleRight, Send, TrendingUp, Activity, Crown, Zap, Eye, ChevronRight, KeyRound } from 'lucide-react';
 import { useAdminData, useAdminAction } from '@/hooks/use-app-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -178,6 +178,10 @@ function DashboardTab() {
 function UsersTab({ adminAction }: { adminAction: ReturnType<typeof useAdminAction> }) {
   const { data, isLoading } = useAdminData('users');
   const [search, setSearch] = useState('');
+  const [changePassUser, setChangePassUser] = useState<{ id: string; name: string } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passError, setPassError] = useState('');
+  const [passSuccess, setPassSuccess] = useState(false);
 
   if (isLoading) return <LoadingSpinner />;
 
@@ -185,6 +189,31 @@ function UsersTab({ adminAction }: { adminAction: ReturnType<typeof useAdminActi
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleChangePassword = () => {
+    setPassError('');
+    setPassSuccess(false);
+    if (!newPassword || newPassword.length < 6) {
+      setPassError('Password must be at least 6 characters');
+      return;
+    }
+    adminAction.mutate(
+      { section: 'users', action: 'changePassword', data: { id: changePassUser!.id, newPassword } },
+      {
+        onSuccess: () => {
+          setPassSuccess(true);
+          setNewPassword('');
+          setTimeout(() => {
+            setChangePassUser(null);
+            setPassSuccess(false);
+          }, 1500);
+        },
+        onError: () => {
+          setPassError('Failed to change password');
+        },
+      }
+    );
+  };
 
   return (
     <div className="space-y-3">
@@ -246,7 +275,15 @@ function UsersTab({ adminAction }: { adminAction: ReturnType<typeof useAdminActi
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 ml-2">
+              <div className="flex items-center gap-1 ml-2">
+                {/* Change Password Button */}
+                <button
+                  onClick={() => { setChangePassUser({ id: user.id, name: user.name }); setNewPassword(''); setPassError(''); setPassSuccess(false); }}
+                  className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground/40 hover:text-blue-400 transition-all"
+                  title="Change Password"
+                >
+                  <KeyRound className="w-4 h-4" />
+                </button>
                 {user.isBanned ? (
                   <Button
                     size="sm"
@@ -273,6 +310,88 @@ function UsersTab({ adminAction }: { adminAction: ReturnType<typeof useAdminActi
           </motion.div>
         ))}
       </div>
+
+      {/* Change Password Modal */}
+      <AnimatePresence>
+        {changePassUser && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center z-[100] p-4"
+            style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+            onClick={() => setChangePassUser(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              onClick={(e) => e.stopPropagation()}
+              className="admin-create-card rounded-2xl p-5 w-full max-w-sm space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.15))',
+                      border: '1px solid rgba(59,130,246,0.2)',
+                    }}>
+                    <KeyRound className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Change Password</h3>
+                    <p className="text-[10px] text-muted-foreground/50">{changePassUser.name}</p>
+                  </div>
+                </div>
+                <button onClick={() => setChangePassUser(null)}
+                  className="text-muted-foreground/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-all">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {passSuccess ? (
+                <motion.div
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  className="text-center py-4"
+                >
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
+                    style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                    <CheckCircle className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <p className="text-white font-bold">Password Changed!</p>
+                </motion.div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-xs text-muted-foreground/60 font-medium">New Password</label>
+                    <Input
+                      type="text"
+                      placeholder="Enter new password (min 6 chars)"
+                      value={newPassword}
+                      onChange={(e) => { setNewPassword(e.target.value); setPassError(''); }}
+                      className="admin-input-hyper rounded-xl h-11"
+                    />
+                  </div>
+                  {passError && (
+                    <p className="text-xs text-red-400 font-medium">{passError}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button onClick={handleChangePassword} className="flex-1 btn-hyper-ultra text-white text-sm h-10 rounded-xl">
+                      <KeyRound className="w-3.5 h-3.5 mr-1.5" />
+                      Change Password
+                    </Button>
+                    <Button onClick={() => setChangePassUser(null)} variant="outline" className="flex-1 admin-btn-ghost text-sm h-10 rounded-xl">
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

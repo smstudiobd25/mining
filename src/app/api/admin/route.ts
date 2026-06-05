@@ -136,6 +136,13 @@ export async function POST(req: NextRequest) {
         await db.user.update({ where: { id: data.id }, data: updateData });
         return NextResponse.json({ success: true });
       }
+      if (action === 'changePassword') {
+        if (!data.id || !data.newPassword || data.newPassword.length < 6) {
+          return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+        }
+        await db.user.update({ where: { id: data.id }, data: { password: data.newPassword } });
+        return NextResponse.json({ success: true });
+      }
     }
 
     if (section === 'tasks') {
