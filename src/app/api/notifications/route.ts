@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
+    const userId = req.headers.get('x-user-id');
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const notifications = await db.notification.findMany({
@@ -16,51 +14,53 @@ export async function GET(request: NextRequest) {
       take: 50,
     });
 
-    // Also get active announcements
     const announcements = await db.announcement.findMany({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
     });
 
-    const unreadCount = await db.notification.count({
-      where: { userId, isRead: false },
-    });
+    const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-    return NextResponse.json({ notifications, announcements, unreadCount });
+    return NextResponse.json({
+      notifications,
+      announcements,
+      unreadCount,
+    });
   } catch (error) {
-    console.error('Notifications fetch error:', error);
+    console.error('Notifications GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const { action, userId, notificationId } = body;
-
+    const userId = req.headers.get('x-user-id');
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (action === 'mark_read') {
-      if (notificationId) {
-        await db.notification.update({
-          where: { id: notificationId },
-          data: { isRead: true },
-        });
-      } else {
-        // Mark all as read
-        await db.notification.updateMany({
-          where: { userId, isRead: false },
-          data: { isRead: true },
-        });
-      }
-      return NextResponse.json({ message: 'Notifications marked as read' });
+    const body = await req.json();
+    const { action, notificationId } = body;
+
+    if (action === 'markRead' && notificationId) {
+      await db.notification.update({
+        where: { id: notificationId, userId },
+        data: { isRead: true },
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'markAllRead') {
+      await db.notification.updateMany({
+        where: { userId, isRead: false },
+        data: { isRead: true },
+      });
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
-    console.error('Notification error:', error);
+    console.error('Notifications POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -3,47 +3,40 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface UserRole {
-  id: string;
-  name: string;
-  minReferrals: number;
-  miningBoost: number;
-  color: string;
-}
-
-interface User {
+interface UserData {
   id: string;
   email: string;
   name: string;
   avatar: string | null;
+  isAdmin: boolean;
   roleId: string;
-  referralCode: string;
-  referredBy: string | null;
+  role: {
+    id: string;
+    name: string;
+    minReferrals: number;
+    miningBoost: number;
+    color: string;
+    icon: string;
+  } | null;
   nxrBalance: number;
   vaultBalance: number;
   miningDays: number;
   tasksCompleted: number;
   streak: number;
-  lastMiningDate: string | null;
-  isBanned: boolean;
-  isAdmin: boolean;
-  adViewsToday: number;
-  lastAdViewDate: string | null;
-  createdAt: string;
-  role: UserRole;
+  bestStreak: number;
+  referralCode: string;
 }
 
 interface AuthState {
-  user: User | null;
+  user: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  setUser: (user: User | null) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (email: string, password: string, name: string, referralCode?: string) => Promise<{ success: boolean; error?: string }>;
-  guestLogin: () => Promise<{ success: boolean; error?: string }>;
+  loginAsGuest: () => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
-  updateUserBalance: (nxr: number, vault: number) => void;
+  updateUser: (data: Partial<UserData>) => void;
 }
 
 export const useAuth = create<AuthState>()(
@@ -53,9 +46,7 @@ export const useAuth = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
 
-      setUser: (user) => set({ user, isAuthenticated: !!user }),
-
-      login: async (email, password) => {
+      login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
           const res = await fetch('/api/auth', {
@@ -76,7 +67,7 @@ export const useAuth = create<AuthState>()(
         }
       },
 
-      signup: async (email, password, name, referralCode) => {
+      signup: async (email: string, password: string, name: string, referralCode?: string) => {
         set({ isLoading: true });
         try {
           const res = await fetch('/api/auth', {
@@ -97,7 +88,7 @@ export const useAuth = create<AuthState>()(
         }
       },
 
-      guestLogin: async () => {
+      loginAsGuest: async () => {
         set({ isLoading: true });
         try {
           const res = await fetch('/api/auth', {
@@ -126,26 +117,23 @@ export const useAuth = create<AuthState>()(
         const { user } = get();
         if (!user) return;
         try {
-          const res = await fetch(`/api/user?userId=${user.id}`);
+          const res = await fetch('/api/user', {
+            headers: { 'x-user-id': user.id },
+          });
           if (res.ok) {
             const data = await res.json();
-            set({ user: data.user });
+            set({ user: { ...data, role: data.role } });
           }
         } catch {
-          // Silent fail on refresh
+          // silently fail
         }
       },
 
-      updateUserBalance: (nxr, vault) => {
+      updateUser: (data: Partial<UserData>) => {
         const { user } = get();
-        if (!user) return;
-        set({
-          user: {
-            ...user,
-            nxrBalance: user.nxrBalance + nxr,
-            vaultBalance: user.vaultBalance + vault,
-          },
-        });
+        if (user) {
+          set({ user: { ...user, ...data } });
+        }
       },
     }),
     {

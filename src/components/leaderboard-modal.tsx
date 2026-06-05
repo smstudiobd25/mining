@@ -1,106 +1,132 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Trophy, Medal } from 'lucide-react';
 import { useLeaderboard } from '@/hooks/use-app-data';
-import { useAuth } from '@/hooks/use-auth';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Trophy, Medal, Award } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface LeaderboardModalProps {
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
 }
 
-interface LeaderboardEntry {
-  rank: number;
-  id: string;
-  name: string;
-  nxrBalance: number;
-  role: { name: string; color: string };
-  isCurrentUser: boolean;
-}
+const periods = [
+  { id: 'daily', label: 'Daily' },
+  { id: 'weekly', label: 'Weekly' },
+  { id: 'monthly', label: 'Monthly' },
+  { id: 'all', label: 'All Time' },
+];
 
-function RankIcon({ rank }: { rank: number }) {
-  if (rank === 1) return <Trophy className="w-5 h-5 text-yellow-400" />;
-  if (rank === 2) return <Medal className="w-5 h-5 text-gray-400" />;
-  if (rank === 3) return <Award className="w-5 h-5 text-amber-600" />;
-  return <span className="text-sm font-bold text-muted-foreground w-5 text-center">{rank}</span>;
-}
-
-export function LeaderboardModal({ open, onClose }: LeaderboardModalProps) {
-  const { user } = useAuth();
+export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
   const [period, setPeriod] = useState('all');
   const { data, isLoading } = useLeaderboard(period);
 
-  const leaderboard = (data?.leaderboard || []) as LeaderboardEntry[];
+  const getRankStyle = (rank: number) => {
+    switch (rank) {
+      case 1: return { bg: 'bg-[#F59E0B]/10', border: 'border-[#F59E0B]/30', text: 'text-[#F59E0B]', icon: '🥇' };
+      case 2: return { bg: 'bg-gray-400/10', border: 'border-gray-400/30', text: 'text-gray-300', icon: '🥈' };
+      case 3: return { bg: 'bg-orange-700/10', border: 'border-orange-700/30', text: 'text-orange-600', icon: '🥉' };
+      default: return { bg: 'bg-card', border: 'border-border', text: 'text-white', icon: '' };
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-card border-border/50 max-w-md max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-primary" />
-            Leaderboard
-          </DialogTitle>
-        </DialogHeader>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[90] bg-[#0A0F1C] flex flex-col"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-[#F59E0B]" />
+              Leaderboard
+            </h2>
+            <button onClick={onClose} className="text-muted-foreground hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-        <Tabs value={period} onValueChange={setPeriod}>
-          <TabsList className="grid w-full grid-cols-4 bg-secondary/50">
-            <TabsTrigger value="daily">Daily</TabsTrigger>
-            <TabsTrigger value="weekly">Weekly</TabsTrigger>
-            <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            <TabsTrigger value="all">All</TabsTrigger>
-          </TabsList>
+          {/* Period tabs */}
+          <div className="flex bg-secondary mx-4 mt-4 rounded-xl p-1">
+            {periods.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setPeriod(p.id)}
+                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                  period === p.id
+                    ? 'bg-[#2563EB] text-white'
+                    : 'text-muted-foreground hover:text-white'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
-          <TabsContent value={period} className="mt-4">
+          {/* Leaderboard list */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 pb-8 space-y-2">
             {isLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <div className="flex justify-center py-12">
+                <div className="w-6 h-6 border-2 border-[#2563EB]/30 border-t-[#2563EB] rounded-full animate-spin" />
               </div>
-            ) : leaderboard.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No data yet
+            ) : data?.leaderboard?.length === 0 ? (
+              <div className="text-center py-12">
+                <Medal className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">No data for this period</p>
               </div>
             ) : (
-              <ScrollArea className="max-h-[50vh]">
-                <div className="space-y-2">
-                  {leaderboard.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className={`flex items-center gap-3 p-3 rounded-xl ${
-                        entry.isCurrentUser
-                          ? 'bg-primary/10 border border-primary/20'
-                          : 'bg-secondary/30'
-                      }`}
-                    >
-                      <RankIcon rank={entry.rank} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-medium text-sm ${entry.isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
-                          {entry.name} {entry.isCurrentUser && '(You)'}
-                        </p>
-                        <div
-                          className="text-[10px] px-1.5 py-0.5 rounded-full inline-block mt-0.5"
-                          style={{
-                            backgroundColor: `${entry.role.color}15`,
-                            color: entry.role.color,
-                          }}
-                        >
-                          {entry.role.name}
-                        </div>
-                      </div>
-                      <p className="font-semibold text-sm text-foreground">
-                        {entry.nxrBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} NXR
-                      </p>
+              data?.leaderboard?.map((entry: {
+                rank: number;
+                id: string;
+                name: string;
+                nxrBalance: number;
+                role: { icon: string; name: string; color: string } | null;
+                miningDays: number;
+                isCurrentUser: boolean;
+              }) => {
+                const style = getRankStyle(entry.rank);
+                return (
+                  <motion.div
+                    key={entry.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`flex items-center gap-3 p-3 rounded-xl border ${
+                      style.bg
+                    } ${style.border} ${
+                      entry.isCurrentUser ? 'ring-1 ring-[#2563EB]/50' : ''
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${style.text}`}>
+                      {style.icon || entry.rank}
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-white truncate">
+                          {entry.name}
+                          {entry.isCurrentUser && <span className="text-[#2563EB]"> (You)</span>}
+                        </p>
+                        {entry.role && (
+                          <span className="text-xs">{entry.role.icon}</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{entry.miningDays} mining days</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-white">{entry.nxrBalance.toLocaleString()}</p>
+                      <p className="text-[10px] text-muted-foreground">NXR</p>
+                    </div>
+                  </motion.div>
+                );
+              })
             )}
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

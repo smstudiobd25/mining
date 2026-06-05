@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface CountdownTimerProps {
-  endsAt: string;
+  endsAt: string; // ISO date string
   onComplete: () => void;
 }
 
@@ -12,40 +12,42 @@ export function CountdownTimer({ endsAt, onComplete }: CountdownTimerProps) {
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
-    const endTime = new Date(endsAt).getTime();
-
-    const updateTimer = () => {
+    const calculate = () => {
+      const end = new Date(endsAt).getTime();
       const now = Date.now();
-      const diff = endTime - now;
+      const diff = end - now;
 
       if (diff <= 0) {
         setIsComplete(true);
         setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
-        onComplete();
         return;
       }
 
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      setTimeLeft({ hours, minutes, seconds });
+      setTimeLeft({
+        hours: Math.floor(diff / (1000 * 60 * 60)),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+      });
     };
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-
+    calculate();
+    const interval = setInterval(calculate, 1000);
     return () => clearInterval(interval);
-  }, [endsAt, onComplete]);
+  }, [endsAt]);
+
+  useEffect(() => {
+    if (isComplete) {
+      onComplete();
+    }
+  }, [isComplete, onComplete]);
 
   const pad = (n: number) => n.toString().padStart(2, '0');
 
   if (isComplete) {
     return (
       <div className="text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-green-400 font-semibold text-sm">Claim Ready!</span>
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#2563EB]/20 border border-[#2563EB]/30 mb-3">
+          <span className="text-[#2563EB] text-sm font-medium">✨ Ready to Claim!</span>
         </div>
       </div>
     );
@@ -54,9 +56,9 @@ export function CountdownTimer({ endsAt, onComplete }: CountdownTimerProps) {
   return (
     <div className="flex items-center justify-center gap-2">
       <TimeBlock value={pad(timeLeft.hours)} label="HRS" />
-      <span className="text-primary text-xl font-bold mt-[-16px]">:</span>
+      <span className="text-2xl font-bold text-muted-foreground mb-4">:</span>
       <TimeBlock value={pad(timeLeft.minutes)} label="MIN" />
-      <span className="text-primary text-xl font-bold mt-[-16px]">:</span>
+      <span className="text-2xl font-bold text-muted-foreground mb-4">:</span>
       <TimeBlock value={pad(timeLeft.seconds)} label="SEC" />
     </div>
   );
@@ -65,10 +67,10 @@ export function CountdownTimer({ endsAt, onComplete }: CountdownTimerProps) {
 function TimeBlock({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center">
-      <div className="w-16 h-14 rounded-xl bg-secondary/50 border border-border/50 flex items-center justify-center">
-        <span className="text-2xl font-bold text-foreground font-mono">{value}</span>
+      <div className="bg-secondary border border-border rounded-xl px-3 py-2 min-w-[56px]">
+        <span className="text-2xl font-bold text-white font-mono">{value}</span>
       </div>
-      <span className="text-[10px] text-muted-foreground mt-1">{label}</span>
+      <span className="text-[10px] text-muted-foreground mt-1 font-medium">{label}</span>
     </div>
   );
 }

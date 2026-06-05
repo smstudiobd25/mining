@@ -1,84 +1,36 @@
 'use client';
 
-import { useState } from 'react';
-import { useNotifications } from '@/hooks/use-app-data';
-import { useAuth } from '@/hooks/use-auth';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useToast } from '@/hooks/use-toast';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Megaphone, Gift, Users, Settings, CheckCheck, Loader2, AlertCircle } from 'lucide-react';
-
-interface NotificationItem {
-  id: string;
-  title: string;
-  message: string;
-  type: string;
-  isRead: boolean;
-  createdAt: string;
-}
-
-interface AnnouncementItem {
-  id: string;
-  title: string;
-  message: string;
-  isImportant: boolean;
-  isActive: boolean;
-  createdAt: string;
-}
-
-const typeIcons: Record<string, React.ElementType> = {
-  system: Settings,
-  reward: Gift,
-  referral: Users,
-  announcement: Megaphone,
-  mining: Bell,
-};
+import { Bell, Megaphone, Gift, Zap, Users, Shield, CheckCheck } from 'lucide-react';
+import { useNotifications, useMarkNotificationRead } from '@/hooks/use-app-data';
+import { Button } from '@/components/ui/button';
 
 export function NotificationsPage() {
-  const { user } = useAuth();
-  const { data, isLoading, refetch } = useNotifications();
-  const [markingAll, setMarkingAll] = useState(false);
-  const { toast } = useToast();
+  const { data: notifData, isLoading } = useNotifications();
+  const markRead = useMarkNotificationRead();
 
-  const notifications = (data?.notifications || []) as NotificationItem[];
-  const announcements = (data?.announcements || []) as AnnouncementItem[];
-  const unreadCount = data?.unreadCount || 0;
+  const handleMarkRead = (id: string) => {
+    markRead.mutate({ action: 'markRead', notificationId: id });
+  };
 
-  const handleMarkAllRead = async () => {
-    if (!user) return;
-    setMarkingAll(true);
-    try {
-      await fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'mark_read', userId: user.id }),
-      });
-      refetch();
-      toast({ title: 'All notifications marked as read' });
-    } catch {
-      toast({ title: 'Error', description: 'Failed to mark notifications', variant: 'destructive' });
-    } finally {
-      setMarkingAll(false);
+  const handleMarkAllRead = () => {
+    markRead.mutate({ action: 'markAllRead' });
+  };
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'mining': return <Zap className="w-4 h-4 text-[#2563EB]" />;
+      case 'task': return <CheckCheck className="w-4 h-4 text-green-500" />;
+      case 'referral': return <Users className="w-4 h-4 text-[#7C3AED]" />;
+      case 'announcement': return <Megaphone className="w-4 h-4 text-[#F59E0B]" />;
+      case 'ad': return <Gift className="w-4 h-4 text-[#06B6D4]" />;
+      case 'system': return <Shield className="w-4 h-4 text-[#2563EB]" />;
+      default: return <Bell className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
-  const handleMarkRead = async (notificationId: string) => {
-    if (!user) return;
-    try {
-      await fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'mark_read', userId: user.id, notificationId }),
-      });
-      refetch();
-    } catch {
-      // silent
-    }
-  };
-
-  const formatTime = (dateStr: string) => {
+  const timeAgo = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -92,114 +44,125 @@ export function NotificationsPage() {
     return `${days}d ago`;
   };
 
+  const announcements = notifData?.announcements || [];
+  const notifications = notifData?.notifications || [];
+
   return (
-    <div className="pb-4 space-y-4">
+    <div className="pb-20 px-4 pt-4 space-y-4 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Notifications</h2>
-          <p className="text-sm text-muted-foreground">{unreadCount} unread</p>
-        </div>
-        {unreadCount > 0 && (
+        <h2 className="text-lg font-semibold text-white">Notifications</h2>
+        {notifData && notifData.unreadCount > 0 && (
           <Button
             variant="ghost"
             size="sm"
-            className="text-primary"
             onClick={handleMarkAllRead}
-            disabled={markingAll}
+            className="text-[#2563EB] text-xs"
           >
-            {markingAll ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCheck className="w-4 h-4 mr-1" />}
-            Mark all read
+            <CheckCheck className="w-3 h-3 mr-1" />
+            Mark All Read
           </Button>
         )}
       </div>
 
       {/* Announcements */}
       {announcements.length > 0 && (
-        <div className="space-y-2">
-          {announcements.map((ann) => (
-            <motion.div
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-2"
+        >
+          <h3 className="text-xs text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1.5">
+            <Megaphone className="w-3 h-3" />
+            Announcements
+          </h3>
+          {announcements.map((ann: {
+            id: string;
+            title: string;
+            message: string;
+            isImportant: boolean;
+          }) => (
+            <div
               key={ann.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              className={`rounded-xl p-3 border ${
+                ann.isImportant
+                  ? 'bg-[#F59E0B]/5 border-[#F59E0B]/20'
+                  : 'bg-card border-border'
+              }`}
             >
-              <Card className={`border-primary/20 ${ann.isImportant ? 'bg-primary/5' : 'bg-card'}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Megaphone className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-foreground text-sm">{ann.title}</h4>
-                        {ann.isImportant && (
-                          <AlertCircle className="w-3.5 h-3.5 text-primary" />
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{ann.message}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">{formatTime(ann.createdAt)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+              <div className="flex items-start gap-2">
+                <Megaphone className={`w-4 h-4 mt-0.5 flex-shrink-0 ${ann.isImportant ? 'text-[#F59E0B]' : 'text-muted-foreground'}`} />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-white">{ann.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{ann.message}</p>
+                </div>
+                {ann.isImportant && (
+                  <span className="text-[10px] bg-[#F59E0B]/20 text-[#F59E0B] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">
+                    Important
+                  </span>
+                )}
+              </div>
+            </div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* Notifications */}
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        </div>
-      ) : notifications.length === 0 ? (
-        <div className="text-center py-12">
-          <Bell className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground">No notifications yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Start mining and completing tasks to get notified!</p>
-        </div>
-      ) : (
-        <ScrollArea className="max-h-[60vh]">
-          <div className="space-y-2">
-            {notifications.map((notif, index) => {
-              const Icon = typeIcons[notif.type] || Bell;
-              return (
-                <motion.div
-                  key={notif.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03 }}
-                >
-                  <Card
-                    className={`bg-card border-border/50 cursor-pointer hover:bg-card/80 transition-colors ${
-                      !notif.isRead ? 'border-l-2 border-l-primary' : ''
-                    }`}
-                    onClick={() => !notif.isRead && handleMarkRead(notif.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center shrink-0">
-                          <Icon className="w-4 h-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-foreground text-sm">{notif.title}</h4>
-                            {!notif.isRead && (
-                              <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">{formatTime(notif.createdAt)}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
+      <div className="space-y-2">
+        <h3 className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+          Recent
+        </h3>
+
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="w-6 h-6 border-2 border-[#2563EB]/30 border-t-[#2563EB] rounded-full animate-spin" />
           </div>
-        </ScrollArea>
-      )}
+        ) : notifications.length === 0 ? (
+          <div className="text-center py-12">
+            <Bell className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-muted-foreground text-sm">No notifications yet</p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {notifications.map((notif: {
+              id: string;
+              title: string;
+              message: string;
+              type: string;
+              isRead: boolean;
+              createdAt: string;
+            }) => (
+              <motion.div
+                key={notif.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                onClick={() => !notif.isRead && handleMarkRead(notif.id)}
+                className={`rounded-xl p-3 border cursor-pointer transition-all ${
+                  notif.isRead
+                    ? 'bg-card border-border opacity-60'
+                    : 'bg-card border-[#2563EB]/20 hover:border-[#2563EB]/40'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                    {getIcon(notif.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-white truncate">{notif.title}</p>
+                      {!notif.isRead && (
+                        <div className="w-2 h-2 rounded-full bg-[#2563EB] flex-shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.message}</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">{timeAgo(notif.createdAt)}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,18 +1,30 @@
 import { db } from '../src/lib/db';
 
-async function main() {
+async function seed() {
   console.log('🌱 Seeding database...');
+
+  // Create default roles
+  await Promise.all([
+    db.role.upsert({ where: { name: 'Explorer' }, update: {}, create: { name: 'Explorer', minReferrals: 0, miningBoost: 1.0, color: '#94A3B8', icon: '🧭' } }),
+    db.role.upsert({ where: { name: 'Builder' }, update: {}, create: { name: 'Builder', minReferrals: 5, miningBoost: 1.2, color: '#2563EB', icon: '🔨' } }),
+    db.role.upsert({ where: { name: 'Pioneer' }, update: {}, create: { name: 'Pioneer', minReferrals: 20, miningBoost: 1.5, color: '#7C3AED', icon: '⚡' } }),
+    db.role.upsert({ where: { name: 'Ambassador' }, update: {}, create: { name: 'Ambassador', minReferrals: 50, miningBoost: 2.0, color: '#F59E0B', icon: '👑' } }),
+    db.role.upsert({ where: { name: 'Legend' }, update: {}, create: { name: 'Legend', minReferrals: 100, miningBoost: 3.0, color: '#EF4444', icon: '🔥' } }),
+  ]);
 
   // Create default settings
   const settings = [
-    { key: 'base_mining_reward', value: '50', description: 'Base NXR reward per mining session' },
-    { key: 'mining_duration_hours', value: '24', description: 'Mining session duration in hours' },
-    { key: 'referral_bonus', value: '25', description: 'NXR bonus for successful referral' },
-    { key: 'welcome_bonus', value: '100', description: 'NXR bonus for new user signup' },
-    { key: 'ad_reward', value: '5', description: 'NXR reward per ad view' },
-    { key: 'daily_ad_limit', value: '2', description: 'Maximum ad views per day' },
-    { key: 'task_multiplier', value: '1', description: 'Multiplier for task NXR rewards' },
-    { key: 'vault_multiplier', value: '1', description: 'Multiplier for vault rewards' },
+    { key: 'base_mining_reward', value: '50', description: 'Base NXR reward per mining session', category: 'mining' },
+    { key: 'mining_duration_hours', value: '24', description: 'Mining session duration in hours', category: 'mining' },
+    { key: 'referral_bonus', value: '25', description: 'NXR bonus for referral', category: 'referral' },
+    { key: 'welcome_bonus', value: '100', description: 'NXR welcome bonus for new users', category: 'general' },
+    { key: 'ad_reward', value: '5', description: 'NXR reward per ad view', category: 'ads' },
+    { key: 'daily_ad_limit', value: '2', description: 'Max ad views per day', category: 'ads' },
+    { key: 'streak_bonus', value: '5', description: 'Extra NXR per streak day', category: 'mining' },
+    { key: 'app_name', value: 'Nexora Network', description: 'Application name', category: 'general' },
+    { key: 'maintenance_mode', value: 'false', description: 'Enable maintenance mode', category: 'general' },
+    { key: 'task_multiplier', value: '1', description: 'Global task reward multiplier', category: 'tasks' },
+    { key: 'vault_multiplier', value: '1', description: 'Global vault reward multiplier', category: 'vault' },
   ];
 
   for (const setting of settings) {
@@ -22,34 +34,15 @@ async function main() {
       create: setting,
     });
   }
-  console.log('✅ Settings seeded');
-
-  // Create default roles
-  const roles = [
-    { id: 'role-explorer', name: 'Explorer', minReferrals: 0, miningBoost: 1.0, color: '#94A3B8' },
-    { id: 'role-builder', name: 'Builder', minReferrals: 5, miningBoost: 1.2, color: '#3B82F6' },
-    { id: 'role-pioneer', name: 'Pioneer', minReferrals: 20, miningBoost: 1.5, color: '#8B5CF6' },
-    { id: 'role-ambassador', name: 'Ambassador', minReferrals: 50, miningBoost: 2.0, color: '#F59E0B' },
-    { id: 'role-legend', name: 'Legend', minReferrals: 100, miningBoost: 3.0, color: '#EF4444' },
-  ];
-
-  for (const role of roles) {
-    await db.role.upsert({
-      where: { id: role.id },
-      update: {},
-      create: role,
-    });
-  }
-  console.log('✅ Roles seeded');
 
   // Create default tasks
   const tasks = [
-    { title: 'Follow on X', description: 'Follow Nexora on X (Twitter) for the latest updates', type: 'social', url: 'https://x.com/nexora', nxrReward: 20, vaultReward: 0.02 },
-    { title: 'Join Telegram', description: 'Join the Nexora Telegram community', type: 'social', url: 'https://t.me/nexora', nxrReward: 20, vaultReward: 0.02 },
-    { title: 'Join Discord', description: 'Join the Nexora Discord server', type: 'social', url: 'https://discord.gg/nexora', nxrReward: 20, vaultReward: 0.02 },
-    { title: 'Visit Website', description: 'Visit the official Nexora website', type: 'social', url: 'https://nexora.io', nxrReward: 20, vaultReward: 0.02 },
-    { title: 'Like Post', description: 'Like our latest post on X', type: 'social', url: 'https://x.com/nexora', nxrReward: 20, vaultReward: 0.02 },
-    { title: 'Repost Post', description: 'Repost our latest post on X', type: 'social', url: 'https://x.com/nexora', nxrReward: 20, vaultReward: 0.02 },
+    { title: 'Follow on X', description: 'Follow Nexora on X (Twitter)', type: 'social', url: 'https://x.com/nexora', nxrReward: 20, vaultReward: 0.02, sortOrder: 1 },
+    { title: 'Like Post on X', description: 'Like our latest post on X', type: 'social', url: 'https://x.com/nexora', nxrReward: 15, vaultReward: 0.01, sortOrder: 2 },
+    { title: 'Repost on X', description: 'Repost our latest announcement', type: 'social', url: 'https://x.com/nexora', nxrReward: 20, vaultReward: 0.02, sortOrder: 3 },
+    { title: 'Join Telegram', description: 'Join the Nexora Telegram community', type: 'social', url: 'https://t.me/nexora', nxrReward: 25, vaultReward: 0.03, sortOrder: 4 },
+    { title: 'Join Discord', description: 'Join the Nexora Discord server', type: 'social', url: 'https://discord.gg/nexora', nxrReward: 25, vaultReward: 0.03, sortOrder: 5 },
+    { title: 'Visit Website', description: 'Visit the Nexora official website', type: 'social', url: 'https://nexora.network', nxrReward: 10, vaultReward: 0.01, sortOrder: 6 },
   ];
 
   for (const task of tasks) {
@@ -58,12 +51,11 @@ async function main() {
       await db.task.create({ data: task });
     }
   }
-  console.log('✅ Tasks seeded');
 
   // Create default ad placements
   const ads = [
-    { position: 'home_banner', adType: 'banner', title: 'Welcome to Nexora', imageUrl: '', linkUrl: 'https://nexora.io', htmlCode: '' },
-    { position: 'earn_banner', adType: 'banner', title: 'Earn More NXR', imageUrl: '', linkUrl: 'https://nexora.io', htmlCode: '' },
+    { position: 'home_banner', adType: 'banner', title: 'Welcome to Nexora', htmlCode: '<div style="background:linear-gradient(135deg,#2563EB,#7C3AED);padding:16px;border-radius:12px;text-align:center;color:white;font-weight:bold;">🚀 Start Mining &amp; Earn NXR Rewards!</div>', isActive: true },
+    { position: 'earn_banner', adType: 'banner', title: 'Complete Tasks', htmlCode: '<div style="background:linear-gradient(135deg,#F59E0B,#EF4444);padding:16px;border-radius:12px;text-align:center;color:white;font-weight:bold;">💰 Complete tasks to earn more NXR!</div>', isActive: true },
   ];
 
   for (const ad of ads) {
@@ -72,27 +64,12 @@ async function main() {
       await db.adPlacement.create({ data: ad });
     }
   }
-  console.log('✅ Ad placements seeded');
-
-  // Create default reward vault campaign
-  const existingCampaign = await db.rewardVaultCampaign.findFirst();
-  if (!existingCampaign) {
-    await db.rewardVaultCampaign.create({
-      data: {
-        title: 'Genesis Vault Campaign',
-        description: 'The first Nexora Reward Vault campaign. Earn vault rewards by completing tasks and mining!',
-        totalPool: 10000,
-        isActive: true,
-      },
-    });
-  }
-  console.log('✅ Vault campaign seeded');
 
   // Create default announcements
   const announcements = [
-    { title: 'Welcome to Nexora Network!', message: 'Start mining NXR today and earn rewards. Complete social tasks, invite friends, and grow your balance!', isImportant: true, isActive: true },
-    { title: 'Mining is Live!', message: 'The Nexora mining system is now active. Tap Start Mining to begin earning NXR every 24 hours!', isImportant: false, isActive: true },
-    { title: 'Refer & Earn', message: 'Share your referral code with friends and earn 25 NXR for each successful referral. Level up your role for better mining boosts!', isImportant: false, isActive: true },
+    { title: 'Welcome to Nexora Network!', message: 'Start mining NXR tokens today. Complete tasks, refer friends, and earn rewards!', isImportant: true, isActive: true },
+    { title: 'Mining is Live!', message: 'Your 24-hour mining cycle is ready. Tap Start Mining to begin earning NXR!', isImportant: false, isActive: true },
+    { title: 'Refer & Earn', message: 'Share your referral code with friends and earn bonus NXR for each referral!', isImportant: false, isActive: true },
   ];
 
   for (const ann of announcements) {
@@ -101,75 +78,54 @@ async function main() {
       await db.announcement.create({ data: ann });
     }
   }
-  console.log('✅ Announcements seeded');
+
+  // Get Ambassador role for admin
+  const ambassadorRole = await db.role.findUnique({ where: { name: 'Ambassador' } });
+  const explorerRole = await db.role.findUnique({ where: { name: 'Explorer' } });
 
   // Create admin user
-  const adminReferralCode = 'NEXORA-ADMIN';
-  const existingAdmin = await db.user.findUnique({ where: { email: 'admin@nexora.com' } });
-  if (!existingAdmin) {
+  const adminExists = await db.user.findUnique({ where: { email: 'admin@nexora.com' } });
+  if (!adminExists) {
     await db.user.create({
       data: {
         email: 'admin@nexora.com',
         name: 'Admin',
         password: 'admin123',
-        referralCode: adminReferralCode,
         isAdmin: true,
-        roleId: 'role-ambassador',
+        roleId: ambassadorRole?.id || 'ambassador',
+        referralCode: 'NEXORA-ADMIN',
         nxrBalance: 10000,
         vaultBalance: 50,
         miningDays: 30,
         tasksCompleted: 6,
         streak: 7,
+        bestStreak: 14,
       },
     });
   }
-  console.log('✅ Admin user seeded');
 
   // Create demo user
-  const userReferralCode = 'NEXORA-USER1';
-  const existingUser = await db.user.findUnique({ where: { email: 'user@nexora.com' } });
-  if (!existingUser) {
+  const userExists = await db.user.findUnique({ where: { email: 'user@nexora.com' } });
+  if (!userExists) {
     await db.user.create({
       data: {
         email: 'user@nexora.com',
         name: 'Demo User',
         password: 'user123',
-        referralCode: userReferralCode,
         isAdmin: false,
-        roleId: 'role-explorer',
+        roleId: explorerRole?.id || 'explorer',
+        referralCode: 'NEXORA-DEMO',
         nxrBalance: 250,
-        vaultBalance: 1.5,
+        vaultBalance: 2.5,
         miningDays: 5,
-        tasksCompleted: 3,
-        streak: 2,
+        tasksCompleted: 2,
+        streak: 3,
+        bestStreak: 5,
       },
     });
   }
-  console.log('✅ Demo user seeded');
 
-  // Create notifications for demo user
-  if (!existingUser) {
-    const demoUser = await db.user.findUnique({ where: { email: 'user@nexora.com' } });
-    if (demoUser) {
-      await db.notification.createMany({
-        data: [
-          { userId: demoUser.id, title: 'Welcome Bonus!', message: 'You received 100 NXR as a welcome bonus!', type: 'reward' },
-          { userId: demoUser.id, title: 'Mining Ready', message: 'Your mining session is ready to start. Tap Start Mining to begin!', type: 'system' },
-          { userId: demoUser.id, title: 'Complete Tasks', message: 'Complete social tasks to earn more NXR and vault rewards!', type: 'system' },
-        ],
-      });
-    }
-  }
-  console.log('✅ Notifications seeded');
-
-  console.log('🎉 Seeding complete!');
+  console.log('✅ Seed completed!');
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Seed error:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await db.$disconnect();
-  });
+seed().catch(console.error);

@@ -1,72 +1,53 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import React from 'react';
 
 interface AdBannerProps {
   position: string;
 }
 
 export function AdBanner({ position }: AdBannerProps) {
-  const [ads, setAds] = useState<Array<Record<string, unknown>>>([]);
-  const [currentAd, setCurrentAd] = useState<Record<string, unknown> | null>(null);
+  const [ads, setAds] = React.useState<Array<{
+    id: string;
+    title: string;
+    htmlCode: string;
+    imageUrl: string;
+    linkUrl: string;
+    adType: string;
+  }> | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetch(`/api/ads?position=${position}`)
-      .then(res => res.json())
-      .then(data => {
-        setAds(data.ads || []);
-        if (data.ads && data.ads.length > 0) {
-          setCurrentAd(data.ads[Math.floor(Math.random() * data.ads.length)]);
-        }
-      })
-      .catch(() => {});
+      .then((res) => res.json())
+      .then((data) => setAds(data.ads || []))
+      .catch(() => setAds([]));
   }, [position]);
 
-  if (!currentAd) return null;
+  if (!ads || ads.length === 0) return null;
 
-  // Custom HTML ad (for AdSense, etc.)
-  if (currentAd.adType === 'custom_html' && currentAd.htmlCode) {
+  const ad = ads[0];
+
+  if (ad.htmlCode) {
     return (
-      <div className="w-full rounded-xl overflow-hidden border border-border/30">
-        <div dangerouslySetInnerHTML={{ __html: currentAd.htmlCode as string }} />
-      </div>
+      <div
+        className="rounded-xl overflow-hidden"
+        dangerouslySetInnerHTML={{ __html: ad.htmlCode }}
+      />
     );
   }
 
-  // Image + link banner
-  if (currentAd.imageUrl) {
+  if (ad.imageUrl) {
     return (
       <a
-        href={currentAd.linkUrl as string || '#'}
+        href={ad.linkUrl || '#'}
         target="_blank"
         rel="noopener noreferrer"
-        className="block w-full rounded-xl overflow-hidden border border-border/30 hover:border-primary/30 transition-colors"
+        className="block rounded-xl overflow-hidden"
       >
-        <img
-          src={currentAd.imageUrl as string}
-          alt={currentAd.title as string || 'Advertisement'}
-          className="w-full h-auto object-cover"
-        />
+        <img src={ad.imageUrl} alt={ad.title || 'Advertisement'} className="w-full" />
       </a>
     );
   }
 
-  // Default placeholder banner
-  return (
-    <a
-      href={currentAd.linkUrl as string || '#'}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block w-full rounded-xl p-4 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border border-primary/10 hover:border-primary/30 transition-colors"
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-foreground">{currentAd.title as string || 'Nexora Network'}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Powered by Nexora Ads</p>
-        </div>
-        <ExternalLink className="w-4 h-4 text-primary" />
-      </div>
-    </a>
-  );
+  return null;
 }

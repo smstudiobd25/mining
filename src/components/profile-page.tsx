@@ -1,91 +1,79 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Copy, Share2, Shield, LogOut, Trophy, Settings, Calendar, CheckCircle, Users, Flame } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useReferrals } from '@/hooks/use-app-data';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { AdBanner } from './ad-banner';
-import { LeaderboardModal } from './leaderboard-modal';
-import { useToast } from '@/hooks/use-toast';
-import { motion } from 'framer-motion';
-import { User, Copy, Trophy, LogOut, Flame, Pickaxe, Target, Users, Shield, ChevronRight } from 'lucide-react';
 
-export function ProfilePage({ onOpenAdmin }: { onOpenAdmin: () => void }) {
-  const { user, logout, refreshUser } = useAuth();
+interface ProfilePageProps {
+  onOpenLeaderboard: () => void;
+  onOpenAdmin: () => void;
+}
+
+export function ProfilePage({ onOpenLeaderboard, onOpenAdmin }: ProfilePageProps) {
+  const { user, logout } = useAuth();
   const { data: referralData } = useReferrals();
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const { toast } = useToast();
+  const [copied, setCopied] = useState<string | null>(null);
 
-  if (!user) return null;
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(type);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  };
 
-  const referralCode = user.referralCode;
+  const shareReferral = () => {
+    const text = `Join Nexora Network and earn NXR tokens! Use my referral code: ${user?.referralCode}`;
+    if (navigator.share) {
+      navigator.share({ title: 'Nexora Network', text });
+    } else {
+      copyToClipboard(text, 'link');
+    }
+  };
+
+  const referralCode = user?.referralCode || '';
   const referralLink = typeof window !== 'undefined' ? `${window.location.origin}?ref=${referralCode}` : '';
-  const referralCount = (referralData as Record<string, unknown>)?.referralCount as number || 0;
 
-  const handleCopyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(referralCode);
-      toast({ title: 'Copied!', description: 'Referral code copied to clipboard' });
-    } catch {
-      toast({ title: 'Error', description: 'Failed to copy', variant: 'destructive' });
-    }
-  };
+  const roleIcon = user?.role?.icon || '🧭';
+  const roleName = user?.role?.name || 'Explorer';
+  const roleColor = user?.role?.color || '#94A3B8';
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(referralLink);
-      toast({ title: 'Copied!', description: 'Referral link copied to clipboard' });
-    } catch {
-      toast({ title: 'Error', description: 'Failed to copy', variant: 'destructive' });
-    }
-  };
-
-  const handleLogout = () => {
-    logout();
-    toast({ title: 'Logged out', description: 'See you next time!' });
-  };
-
-  const stats = [
-    { icon: Pickaxe, label: 'Mining Days', value: user.miningDays },
-    { icon: Target, label: 'Tasks Done', value: user.tasksCompleted },
-    { icon: Users, label: 'Referrals', value: referralCount },
-    { icon: Flame, label: 'Streak', value: user.streak },
-  ];
+  const nextRole = referralData?.nextRole;
+  const referralsNeeded = referralData?.referralsNeeded || 0;
+  const referralCount = referralData?.referralCount || 0;
 
   return (
-    <div className="pb-4 space-y-4">
-      <LeaderboardModal open={showLeaderboard} onClose={() => setShowLeaderboard(false)} />
-
-      {/* Profile Header */}
+    <div className="pb-20 px-4 pt-4 space-y-4 max-w-lg mx-auto">
+      {/* Profile Card */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl p-5 bg-card border border-border text-center"
       >
-        <Card className="bg-gradient-to-br from-primary/10 via-card to-card border-primary/10">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center">
-                <User className="w-8 h-8 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-foreground">{user.name}</h3>
-                <p className="text-sm text-muted-foreground">{user.email}</p>
-                <div
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mt-1"
-                  style={{
-                    backgroundColor: `${user.role?.color || '#2563EB'}15`,
-                    color: user.role?.color || '#2563EB',
-                  }}
-                >
-                  <Shield className="w-3 h-3" />
-                  {user.role?.name || 'Explorer'}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Avatar */}
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#2563EB] to-[#7C3AED] flex items-center justify-center mx-auto text-3xl font-bold text-white shadow-lg shadow-[#2563EB]/20">
+          {(user?.name || 'U').charAt(0).toUpperCase()}
+        </div>
+
+        <h2 className="text-xl font-bold text-white mt-3">{user?.name || 'User'}</h2>
+        <p className="text-sm text-muted-foreground">{user?.email}</p>
+
+        {/* Role Badge */}
+        <div
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border mt-3"
+          style={{
+            borderColor: `${roleColor}40`,
+            backgroundColor: `${roleColor}15`,
+          }}
+        >
+          <span>{roleIcon}</span>
+          <span className="text-sm font-medium" style={{ color: roleColor }}>
+            {roleName}
+          </span>
+        </div>
       </motion.div>
 
       {/* Stats Grid */}
@@ -95,123 +83,182 @@ export function ProfilePage({ onOpenAdmin }: { onOpenAdmin: () => void }) {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-2 gap-3"
       >
-        {stats.map((stat) => (
-          <Card key={stat.label} className="bg-card border-border/50">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <stat.icon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xl font-bold text-foreground">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="rounded-xl p-4 bg-card border border-border card-hover">
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="w-4 h-4 text-[#2563EB]" />
+            <span className="text-xs text-muted-foreground">Mining Days</span>
+          </div>
+          <p className="text-2xl font-bold text-white">{user?.miningDays ?? 0}</p>
+        </div>
+        <div className="rounded-xl p-4 bg-card border border-border card-hover">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <span className="text-xs text-muted-foreground">Tasks Done</span>
+          </div>
+          <p className="text-2xl font-bold text-white">{user?.tasksCompleted ?? 0}</p>
+        </div>
+        <div className="rounded-xl p-4 bg-card border border-border card-hover">
+          <div className="flex items-center gap-2 mb-2">
+            <Users className="w-4 h-4 text-[#7C3AED]" />
+            <span className="text-xs text-muted-foreground">Referrals</span>
+          </div>
+          <p className="text-2xl font-bold text-white">{referralCount}</p>
+        </div>
+        <div className="rounded-xl p-4 bg-card border border-border card-hover">
+          <div className="flex items-center gap-2 mb-2">
+            <Flame className="w-4 h-4 text-orange-500" />
+            <span className="text-xs text-muted-foreground">Streak</span>
+          </div>
+          <p className="text-2xl font-bold text-white">{user?.streak ?? 0}</p>
+        </div>
       </motion.div>
 
       {/* Referral Section */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.15 }}
+        className="rounded-2xl p-5 bg-card border border-border"
       >
-        <Card className="bg-card border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-5 h-5 text-primary" />
-              <h3 className="font-semibold text-foreground">Referral Program</h3>
-            </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              Share your code and earn 25 NXR for each referral!
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 px-3 py-2 rounded-lg bg-secondary/50 border border-border/50 text-sm font-mono text-foreground">
-                  {referralCode}
-                </div>
-                <Button size="sm" variant="outline" className="shrink-0" onClick={handleCopyCode}>
-                  <Copy className="w-4 h-4" />
-                </Button>
+        <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+          <Users className="w-4 h-4 text-[#2563EB]" />
+          Referral Program
+        </h3>
+
+        {/* Referral Code */}
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">Your Referral Code</label>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 bg-secondary rounded-lg px-3 py-2.5 text-white font-mono text-sm">
+                {referralCode}
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 px-3 py-2 rounded-lg bg-secondary/50 border border-border/50 text-xs text-muted-foreground truncate">
-                  {referralLink}
-                </div>
-                <Button size="sm" variant="outline" className="shrink-0" onClick={handleCopyLink}>
-                  <Copy className="w-4 h-4" />
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => copyToClipboard(referralCode, 'code')}
+                className="border-border"
+              >
+                <Copy className="w-4 h-4" />
+                {copied === 'code' && <span className="text-green-500 text-xs ml-1">✓</span>}
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {referralCount} referral{referralCount !== 1 ? 's' : ''} • Next role: {(referralData as Record<string, unknown>)?.nextRole ? ((referralData as Record<string, unknown>)?.nextRole as Record<string, unknown>)?.name as string : 'Keep referring!'}
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Referral Link */}
+          <div>
+            <label className="text-xs text-muted-foreground">Referral Link</label>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 bg-secondary rounded-lg px-3 py-2.5 text-white text-xs truncate">
+                {referralLink}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => copyToClipboard(referralLink, 'link')}
+                className="border-border"
+              >
+                <Copy className="w-4 h-4" />
+                {copied === 'link' && <span className="text-green-500 text-xs ml-1">✓</span>}
+              </Button>
+            </div>
+          </div>
+
+          <Button
+            onClick={shareReferral}
+            className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white"
+          >
+            <Share2 className="w-4 h-4 mr-2" />
+            Share Referral
+          </Button>
+        </div>
       </motion.div>
 
-      {/* Leaderboard Button */}
+      {/* Role Progress */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl p-5 bg-card border border-border"
       >
-        <Card
-          className="bg-card border-border/50 cursor-pointer hover:bg-card/80 transition-colors"
-          onClick={() => setShowLeaderboard(true)}
-        >
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-              <Trophy className="w-5 h-5 text-yellow-500" />
+        <h3 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
+          <Shield className="w-4 h-4 text-[#F59E0B]" />
+          Role Progress
+        </h3>
+
+        <div className="flex items-center gap-3 mb-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+            style={{ backgroundColor: `${roleColor}20` }}
+          >
+            {roleIcon}
+          </div>
+          <div className="flex-1">
+            <p className="text-white font-medium">{roleName}</p>
+            <p className="text-xs text-muted-foreground">{referralCount} referrals</p>
+          </div>
+          {nextRole && (
+            <div className="text-right">
+              <p className="text-sm font-medium" style={{ color: nextRole.color }}>
+                {nextRole.icon} {nextRole.name}
+              </p>
+              <p className="text-xs text-muted-foreground">{referralsNeeded} more needed</p>
             </div>
-            <div className="flex-1">
-              <p className="font-medium text-foreground text-sm">Leaderboard</p>
-              <p className="text-xs text-muted-foreground">See top miners</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
+          )}
+        </div>
+
+        {nextRole && (
+          <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min((referralCount / nextRole.minReferrals) * 100, 100)}%`,
+                backgroundColor: nextRole.color,
+              }}
+            />
+          </div>
+        )}
       </motion.div>
 
-      {/* Admin Access */}
-      {user.isAdmin && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
+      {/* Action Buttons */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="space-y-2"
+      >
+        <Button
+          onClick={onOpenLeaderboard}
+          variant="outline"
+          className="w-full border-border text-white hover:bg-secondary justify-start"
         >
-          <Card
-            className="bg-card border-primary/20 cursor-pointer hover:bg-primary/5 transition-colors"
+          <Trophy className="w-4 h-4 mr-2 text-[#F59E0B]" />
+          Leaderboard
+        </Button>
+
+        {user?.isAdmin && (
+          <Button
             onClick={onOpenAdmin}
+            variant="outline"
+            className="w-full border-border text-white hover:bg-secondary justify-start"
           >
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-foreground text-sm">Admin Panel</p>
-                <p className="text-xs text-muted-foreground">Manage your network</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-primary" />
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+            <Settings className="w-4 h-4 mr-2 text-[#2563EB]" />
+            Admin Panel
+          </Button>
+        )}
+
+        <Button
+          onClick={logout}
+          variant="outline"
+          className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 justify-start"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Logout
+        </Button>
+      </motion.div>
 
       {/* Ad Banner */}
       <AdBanner position="profile_banner" />
-
-      <Separator className="bg-border/30" />
-
-      {/* Logout */}
-      <Button
-        variant="outline"
-        className="w-full border-destructive/20 text-destructive hover:bg-destructive/10"
-        onClick={handleLogout}
-      >
-        <LogOut className="w-4 h-4 mr-2" />
-        Logout
-      </Button>
     </div>
   );
 }

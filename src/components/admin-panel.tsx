@@ -1,730 +1,567 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, LayoutDashboard, Users, ListTodo, Megaphone, Gift, Shield, Settings, Image, Save, Trash2, Ban, CheckCircle, Plus, ToggleLeft, ToggleRight, Send } from 'lucide-react';
+import { useAdminData, useAdminAction } from '@/hooks/use-app-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
-import {
-  Users, ListTodo, Megaphone, Vault, Shield, Settings, Image as ImageIcon,
-  Loader2, Plus, Trash2, Ban, Search, Save, BarChart3
-} from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 interface AdminPanelProps {
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
 }
 
-export function AdminPanel({ open, onClose }: AdminPanelProps) {
-  const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState('stats');
+const tabs = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'users', label: 'Users', icon: Users },
+  { id: 'tasks', label: 'Tasks', icon: ListTodo },
+  { id: 'announcements', label: 'Announce', icon: Megaphone },
+  { id: 'vault_campaigns', label: 'Vault', icon: Gift },
+  { id: 'roles', label: 'Roles', icon: Shield },
+  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'ads', label: 'Ads', icon: Image },
+];
 
-  if (!user?.isAdmin) return null;
+export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const adminAction = useAdminAction();
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-card border-border/50 max-w-2xl max-h-[90vh] p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
-            Admin Panel
-          </DialogTitle>
-        </DialogHeader>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[95] bg-[#0A0F1C] flex flex-col"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Shield className="w-5 h-5 text-[#2563EB]" />
+              Admin Panel
+            </h2>
+            <button onClick={onClose} className="text-muted-foreground hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-        <div className="p-6 pt-2">
-          <Tabs value={activeSection} onValueChange={setActiveSection}>
-            <TabsList className="flex flex-wrap gap-1 bg-secondary/30 h-auto p-1 mb-4">
-              <TabsTrigger value="stats" className="text-xs gap-1"><BarChart3 className="w-3 h-3" />Stats</TabsTrigger>
-              <TabsTrigger value="users" className="text-xs gap-1"><Users className="w-3 h-3" />Users</TabsTrigger>
-              <TabsTrigger value="tasks" className="text-xs gap-1"><ListTodo className="w-3 h-3" />Tasks</TabsTrigger>
-              <TabsTrigger value="announcements" className="text-xs gap-1"><Megaphone className="w-3 h-3" />News</TabsTrigger>
-              <TabsTrigger value="vault" className="text-xs gap-1"><Vault className="w-3 h-3" />Vault</TabsTrigger>
-              <TabsTrigger value="roles" className="text-xs gap-1"><Shield className="w-3 h-3" />Roles</TabsTrigger>
-              <TabsTrigger value="settings" className="text-xs gap-1"><Settings className="w-3 h-3" />Config</TabsTrigger>
-              <TabsTrigger value="ads" className="text-xs gap-1"><ImageIcon className="w-3 h-3" />Ads</TabsTrigger>
-            </TabsList>
+          {/* Tab navigation */}
+          <div className="flex overflow-x-auto border-b border-border px-2 gap-1">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-[#2563EB] text-[#2563EB]'
+                      : 'border-transparent text-muted-foreground hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
 
-            <ScrollArea className="max-h-[60vh]">
-              <TabsContent value="stats"><StatsSection userId={user.id} /></TabsContent>
-              <TabsContent value="users"><UsersSection userId={user.id} /></TabsContent>
-              <TabsContent value="tasks"><TasksSection userId={user.id} /></TabsContent>
-              <TabsContent value="announcements"><AnnouncementsSection userId={user.id} /></TabsContent>
-              <TabsContent value="vault"><VaultSection userId={user.id} /></TabsContent>
-              <TabsContent value="roles"><RolesSection userId={user.id} /></TabsContent>
-              <TabsContent value="settings"><SettingsSection userId={user.id} /></TabsContent>
-              <TabsContent value="ads"><AdsSection userId={user.id} /></TabsContent>
-            </ScrollArea>
-          </Tabs>
-        </div>
-      </DialogContent>
-    </Dialog>
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {activeTab === 'dashboard' && <DashboardTab />}
+            {activeTab === 'users' && <UsersTab adminAction={adminAction} />}
+            {activeTab === 'tasks' && <TasksTab adminAction={adminAction} />}
+            {activeTab === 'announcements' && <AnnouncementsTab adminAction={adminAction} />}
+            {activeTab === 'vault_campaigns' && <VaultTab adminAction={adminAction} />}
+            {activeTab === 'roles' && <RolesTab adminAction={adminAction} />}
+            {activeTab === 'settings' && <SettingsTab adminAction={adminAction} />}
+            {activeTab === 'ads' && <AdsTab adminAction={adminAction} />}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
-// Helper hook for admin data fetching
-function useAdminFetch<T>(section: string, userId: string, extraParams: string = '') {
-  const [data, setData] = useState<T | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [fetching, setFetching] = useState(false);
+// Dashboard Tab
+function DashboardTab() {
+  const { data, isLoading } = useAdminData('dashboard');
 
-  const loading = data === null || fetching;
+  if (isLoading) return <LoadingSpinner />;
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/admin?section=${section}&userId=${userId}${extraParams}`)
-      .then(res => res.json())
-      .then(result => {
-        if (!cancelled) setData(result);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setFetching(false);
-      });
-    return () => { cancelled = true; };
-  }, [section, userId, extraParams, refreshKey]);
-
-  const refresh = () => {
-    setFetching(true);
-    setRefreshKey(k => k + 1);
-  };
-
-  return { data, loading, refresh };
-}
-
-// Stats Section
-function StatsSection({ userId }: { userId: string }) {
-  const { data, loading } = useAdminFetch<{ stats: Record<string, unknown> }>('stats', userId);
-
-  if (loading || !data) return <LoadingSpinner />;
-
-  const stats = data.stats;
-  const statItems = [
-    { label: 'Total Users', value: (stats?.totalUsers as number) || 0, icon: Users },
-    { label: 'Active Miners', value: (stats?.activeMiners as number) || 0, icon: Shield },
-    { label: 'Total NXR', value: ((stats?.totalNxR as number) || 0).toLocaleString(), icon: BarChart3 },
-    { label: 'Tasks Completed', value: (stats?.totalTasks as number) || 0, icon: ListTodo },
-    { label: 'Total Referrals', value: (stats?.totalReferrals as number) || 0, icon: Users },
+  const stats = [
+    { label: 'Total Users', value: data?.totalUsers ?? 0, icon: Users, color: '#2563EB' },
+    { label: 'Active Miners', value: data?.activeMiners ?? 0, icon: Shield, color: '#7C3AED' },
+    { label: 'Total NXR', value: (data?.totalNxr ?? 0).toLocaleString(), icon: Gift, color: '#F59E0B' },
+    { label: 'Tasks Done', value: data?.totalTasksCompleted ?? 0, icon: ListTodo, color: '#06B6D4' },
+    { label: 'Banned', value: data?.bannedUsers ?? 0, icon: Ban, color: '#EF4444' },
+    { label: 'Referrals', value: data?.totalReferrals ?? 0, icon: Users, color: '#10B981' },
   ];
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      {statItems.map((item) => (
-        <Card key={item.label} className="bg-secondary/30 border-border/30">
-          <CardContent className="p-3 flex items-center gap-2">
-            <item.icon className="w-4 h-4 text-primary" />
-            <div>
-              <p className="text-lg font-bold text-foreground">{item.value}</p>
-              <p className="text-[10px] text-muted-foreground">{item.label}</p>
-            </div>
-          </CardContent>
-        </Card>
+      {stats.map((stat) => (
+        <div key={stat.label} className="rounded-xl p-4 bg-card border border-border">
+          <stat.icon className="w-5 h-5 mb-2" style={{ color: stat.color }} />
+          <p className="text-2xl font-bold text-white">{stat.value}</p>
+          <p className="text-xs text-muted-foreground">{stat.label}</p>
+        </div>
       ))}
     </div>
   );
 }
 
-// Users Section
-function UsersSection({ userId }: { userId: string }) {
+// Users Tab
+function UsersTab({ adminAction }: { adminAction: ReturnType<typeof useAdminAction> }) {
+  const { data, isLoading } = useAdminData('users');
   const [search, setSearch] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const { data, loading, refresh } = useAdminFetch<{ users: Array<Record<string, unknown>> }>('users', userId, searchTerm ? `&search=${searchTerm}` : '');
-  const { toast } = useToast();
 
-  const users = data?.users || [];
+  if (isLoading) return <LoadingSpinner />;
 
-  const handleBan = async (targetId: string, ban: boolean) => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'ban_user', adminId: userId, targetUserId: targetId, ban }),
-      });
-      const result = await res.json();
-      if (res.ok) {
-        toast({ title: ban ? 'User banned' : 'User unbanned' });
-        refresh();
-      } else {
-        toast({ title: 'Error', description: result.error, variant: 'destructive' });
-      }
-    } catch {
-      toast({ title: 'Error', variant: 'destructive' });
-    }
-  };
-
-  const doSearch = () => {
-    setSearchTerm(search);
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && doSearch()}
-            className="pl-10 bg-secondary/50 border-border/50"
-          />
-        </div>
-        <Button size="sm" variant="outline" onClick={doSearch}>Search</Button>
-      </div>
-
-      {loading ? <LoadingSpinner /> : (
-        <div className="space-y-2">
-          {users.map((u) => (
-            <Card key={u.id as string} className="bg-secondary/20 border-border/30">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs text-primary font-bold">
-                  {(u.name as string)?.[0]?.toUpperCase() || '?'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{u.name as string}</p>
-                  <p className="text-xs text-muted-foreground">{u.email as string}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-medium text-foreground">{(u.nxrBalance as number)?.toFixed(0)} NXR</p>
-                  {(u.role as Record<string, unknown>)?.name && <p className="text-[10px] text-muted-foreground">{(u.role as Record<string, unknown>)?.name as string}</p>}
-                </div>
-                <Button
-                  size="sm"
-                  variant={u.isBanned ? 'outline' : 'destructive'}
-                  className="text-xs h-7"
-                  onClick={() => handleBan(u.id as string, !u.isBanned)}
-                >
-                  <Ban className="w-3 h-3 mr-1" />
-                  {u.isBanned ? 'Unban' : 'Ban'}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+  const users = (data?.users || []).filter((u: { name: string; email: string }) =>
+    u.name.toLowerCase().includes(search.toLowerCase()) ||
+    u.email.toLowerCase().includes(search.toLowerCase())
   );
-}
-
-// Tasks Section
-function TasksSection({ userId }: { userId: string }) {
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', type: 'social', url: '', nxrReward: '20', vaultReward: '0.02' });
-  const { data, loading, refresh } = useAdminFetch<{ tasks: Array<Record<string, unknown>> }>('tasks', userId);
-  const { toast } = useToast();
-
-  const tasks = data?.tasks || [];
-
-  const handleCreate = async () => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create_task', adminId: userId,
-          title: form.title, description: form.description, type: form.type,
-          url: form.url, nxrReward: parseFloat(form.nxrReward), vaultReward: parseFloat(form.vaultReward),
-        }),
-      });
-      if (res.ok) {
-        toast({ title: 'Task created' });
-        setShowForm(false);
-        setForm({ title: '', description: '', type: 'social', url: '', nxrReward: '20', vaultReward: '0.02' });
-        refresh();
-      }
-    } catch {
-      toast({ title: 'Error', variant: 'destructive' });
-    }
-  };
-
-  const handleDelete = async (taskId: string) => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_task', adminId: userId, taskId }),
-      });
-      if (res.ok) {
-        toast({ title: 'Task deleted' });
-        refresh();
-      }
-    } catch {
-      toast({ title: 'Error', variant: 'destructive' });
-    }
-  };
-
-  const handleToggle = async (taskId: string, isActive: boolean) => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_task', adminId: userId, taskId, isActive: !isActive }),
-      });
-      if (res.ok) {
-        toast({ title: 'Task updated' });
-        refresh();
-      }
-    } catch {
-      toast({ title: 'Error', variant: 'destructive' });
-    }
-  };
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{tasks.length} tasks</span>
-        <Button size="sm" className="bg-primary" onClick={() => setShowForm(!showForm)}>
-          <Plus className="w-4 h-4 mr-1" /> New
-        </Button>
-      </div>
-
-      {showForm && (
-        <Card className="bg-secondary/20 border-border/30">
-          <CardContent className="p-3 space-y-2">
-            <Input placeholder="Task title" value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            <Input placeholder="Description" value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            <Input placeholder="URL" value={form.url} onChange={(e) => setForm({...form, url: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            <div className="grid grid-cols-2 gap-2">
-              <Input placeholder="NXR Reward" type="number" value={form.nxrReward} onChange={(e) => setForm({...form, nxrReward: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-              <Input placeholder="Vault Reward" type="number" step="0.01" value={form.vaultReward} onChange={(e) => setForm({...form, vaultReward: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" className="bg-primary flex-1" onClick={handleCreate}>Create</Button>
-              <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading ? <LoadingSpinner /> : (
-        <div className="space-y-2">
-          {tasks.map((task) => (
-            <Card key={task.id as string} className="bg-secondary/20 border-border/30">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{task.title as string}</p>
-                  <p className="text-xs text-muted-foreground">{task.nxrReward as number} NXR • ${(task.vaultReward as number).toFixed(2)} vault</p>
+      <Input
+        placeholder="Search users..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="bg-secondary border-border text-white"
+      />
+      <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+        {users.map((user: {
+          id: string;
+          name: string;
+          email: string;
+          isBanned: boolean;
+          isAdmin: boolean;
+          nxrBalance: number;
+          role: { name: string; icon: string; color: string } | null;
+          _count: { referralsMade: number; taskCompletions: number };
+        }) => (
+          <div key={user.id} className="rounded-xl p-3 bg-card border border-border">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-white truncate">
+                  {user.name}
+                  {user.isAdmin && <span className="text-[#2563EB] text-xs ml-1">Admin</span>}
+                  {user.isBanned && <span className="text-destructive text-xs ml-1">Banned</span>}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-[#2563EB]">{user.nxrBalance.toLocaleString()} NXR</span>
+                  <span className="text-xs text-muted-foreground">
+                    {user.role?.icon} {user.role?.name}
+                  </span>
                 </div>
-                <Switch checked={task.isActive as boolean} onCheckedChange={() => handleToggle(task.id as string, task.isActive as boolean)} />
-                <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => handleDelete(task.id as string)}>
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Announcements Section
-function AnnouncementsSection({ userId }: { userId: string }) {
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title: '', message: '', isImportant: false });
-  const { data, loading, refresh } = useAdminFetch<{ announcements: Array<Record<string, unknown>> }>('announcements', userId);
-  const { toast } = useToast();
-
-  const announcements = data?.announcements || [];
-
-  const handleCreate = async () => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_announcement', adminId: userId, ...form }),
-      });
-      if (res.ok) {
-        toast({ title: 'Announcement created & notifications sent' });
-        setShowForm(false);
-        setForm({ title: '', message: '', isImportant: false });
-        refresh();
-      }
-    } catch {
-      toast({ title: 'Error', variant: 'destructive' });
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_announcement', adminId: userId, announcementId: id }),
-      });
-      if (res.ok) { toast({ title: 'Deleted' }); refresh(); }
-    } catch { toast({ title: 'Error', variant: 'destructive' }); }
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{announcements.length} announcements</span>
-        <Button size="sm" className="bg-primary" onClick={() => setShowForm(!showForm)}>
-          <Plus className="w-4 h-4 mr-1" /> New
-        </Button>
-      </div>
-
-      {showForm && (
-        <Card className="bg-secondary/20 border-border/30">
-          <CardContent className="p-3 space-y-2">
-            <Input placeholder="Title" value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            <Textarea placeholder="Message" value={form.message} onChange={(e) => setForm({...form, message: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" rows={3} />
-            <div className="flex items-center gap-2">
-              <Switch checked={form.isImportant} onCheckedChange={(v) => setForm({...form, isImportant: v})} />
-              <Label className="text-xs text-muted-foreground">Important</Label>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" className="bg-primary flex-1" onClick={handleCreate}>Send</Button>
-              <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading ? <LoadingSpinner /> : (
-        <div className="space-y-2">
-          {announcements.map((ann) => (
-            <Card key={ann.id as string} className="bg-secondary/20 border-border/30">
-              <CardContent className="p-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{ann.title as string}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{ann.message as string}</p>
-                    {ann.isImportant && <span className="text-[10px] text-primary">Important</span>}
-                  </div>
-                  <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => handleDelete(ann.id as string)}>
-                    <Trash2 className="w-3 h-3" />
+              </div>
+              <div className="flex items-center gap-1">
+                {user.isBanned ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => adminAction.mutate({ section: 'users', action: 'unban', data: { id: user.id } })}
+                    className="text-green-500 border-green-500/30 text-xs"
+                  >
+                    <CheckCircle className="w-3 h-3" />
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Vault Section
-function VaultSection({ userId }: { userId: string }) {
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', totalPool: '10000' });
-  const { data, loading, refresh } = useAdminFetch<{ campaigns: Array<Record<string, unknown>> }>('vault_campaigns', userId);
-  const { toast } = useToast();
-
-  const campaigns = data?.campaigns || [];
-
-  const handleCreate = async () => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_vault_campaign', adminId: userId, ...form, totalPool: parseFloat(form.totalPool) }),
-      });
-      if (res.ok) { toast({ title: 'Campaign created' }); setShowForm(false); refresh(); }
-    } catch { toast({ title: 'Error', variant: 'destructive' }); }
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{campaigns.length} campaigns</span>
-        <Button size="sm" className="bg-primary" onClick={() => setShowForm(!showForm)}>
-          <Plus className="w-4 h-4 mr-1" /> New
-        </Button>
-      </div>
-
-      {showForm && (
-        <Card className="bg-secondary/20 border-border/30">
-          <CardContent className="p-3 space-y-2">
-            <Input placeholder="Campaign title" value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            <Textarea placeholder="Description" value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" rows={2} />
-            <Input placeholder="Total Pool" type="number" value={form.totalPool} onChange={(e) => setForm({...form, totalPool: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            <div className="flex gap-2">
-              <Button size="sm" className="bg-primary flex-1" onClick={handleCreate}>Create</Button>
-              <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => adminAction.mutate({ section: 'users', action: 'ban', data: { id: user.id } })}
+                    className="text-destructive border-destructive/30 text-xs"
+                  >
+                    <Ban className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading ? <LoadingSpinner /> : (
-        <div className="space-y-2">
-          {campaigns.map((c) => (
-            <Card key={c.id as string} className="bg-secondary/20 border-border/30">
-              <CardContent className="p-3">
-                <p className="text-sm font-medium text-foreground">{c.title as string}</p>
-                <p className="text-xs text-muted-foreground">{c.description as string}</p>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-xs text-primary">Pool: {(c.totalPool as number).toLocaleString()}</span>
-                  <span className="text-xs text-muted-foreground">{(c._count as Record<string, number>)?.vaultRewards || 0} rewards</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-// Roles Section
-function RolesSection({ userId }: { userId: string }) {
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', minReferrals: '0', miningBoost: '1.0', color: '#2563EB' });
-  const { data, loading, refresh } = useAdminFetch<{ roles: Array<Record<string, unknown>> }>('roles', userId);
-  const { toast } = useToast();
+// Tasks Tab
+function TasksTab({ adminAction }: { adminAction: ReturnType<typeof useAdminAction> }) {
+  const { data, isLoading } = useAdminData('tasks');
+  const [showNew, setShowNew] = useState(false);
+  const [newTask, setNewTask] = useState({ title: '', description: '', type: 'social', url: '', nxrReward: 20, vaultReward: 0.02 });
 
-  const roles = data?.roles || [];
-
-  const handleCreate = async () => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create_role', adminId: userId,
-          name: form.name, minReferrals: parseInt(form.minReferrals),
-          miningBoost: parseFloat(form.miningBoost), color: form.color,
-        }),
-      });
-      if (res.ok) { toast({ title: 'Role created' }); setShowForm(false); refresh(); }
-    } catch { toast({ title: 'Error', variant: 'destructive' }); }
-  };
-
-  const handleDelete = async (roleId: string) => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_role', adminId: userId, roleId }),
-      });
-      const result = await res.json();
-      if (res.ok) { toast({ title: 'Role deleted' }); refresh(); }
-      else { toast({ title: 'Error', description: result.error, variant: 'destructive' }); }
-    } catch { toast({ title: 'Error', variant: 'destructive' }); }
-  };
+  if (isLoading) return <LoadingSpinner />;
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{roles.length} roles</span>
-        <Button size="sm" className="bg-primary" onClick={() => setShowForm(!showForm)}>
-          <Plus className="w-4 h-4 mr-1" /> New
-        </Button>
-      </div>
+      <Button
+        onClick={() => setShowNew(!showNew)}
+        className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white"
+      >
+        <Plus className="w-4 h-4 mr-1" />
+        New Task
+      </Button>
 
-      {showForm && (
-        <Card className="bg-secondary/20 border-border/30">
-          <CardContent className="p-3 space-y-2">
-            <Input placeholder="Role name" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            <div className="grid grid-cols-2 gap-2">
-              <Input placeholder="Min Referrals" type="number" value={form.minReferrals} onChange={(e) => setForm({...form, minReferrals: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-              <Input placeholder="Mining Boost" type="number" step="0.1" value={form.miningBoost} onChange={(e) => setForm({...form, miningBoost: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
+      {showNew && (
+        <div className="rounded-xl p-4 bg-card border border-border space-y-3">
+          <Input placeholder="Title" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} className="bg-secondary border-border text-white" />
+          <Input placeholder="Description" value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} className="bg-secondary border-border text-white" />
+          <div className="grid grid-cols-2 gap-2">
+            <Input placeholder="NXR Reward" type="number" value={newTask.nxrReward} onChange={(e) => setNewTask({ ...newTask, nxrReward: parseFloat(e.target.value) || 0 })} className="bg-secondary border-border text-white" />
+            <Input placeholder="Vault Reward" type="number" step="0.01" value={newTask.vaultReward} onChange={(e) => setNewTask({ ...newTask, vaultReward: parseFloat(e.target.value) || 0 })} className="bg-secondary border-border text-white" />
+          </div>
+          <Input placeholder="URL" value={newTask.url} onChange={(e) => setNewTask({ ...newTask, url: e.target.value })} className="bg-secondary border-border text-white" />
+          <div className="flex gap-2">
+            <Button onClick={() => { adminAction.mutate({ section: 'tasks', action: 'create', data: newTask }); setShowNew(false); }} className="flex-1 bg-[#2563EB] text-white text-sm">Create</Button>
+            <Button onClick={() => setShowNew(false)} variant="outline" className="flex-1 border-border text-sm">Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+        {(data?.tasks || []).map((task: {
+          id: string;
+          title: string;
+          nxrReward: number;
+          vaultReward: number;
+          isActive: boolean;
+          _count: { completions: number };
+        }) => (
+          <div key={task.id} className="rounded-xl p-3 bg-card border border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white">{task.title}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-[#2563EB]">+{task.nxrReward} NXR</span>
+                  <span className="text-xs text-[#F59E0B]">+${task.vaultReward} Vault</span>
+                  <span className="text-xs text-muted-foreground">{task._count.completions} done</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => adminAction.mutate({ section: 'tasks', action: 'toggle', data: { id: task.id } })}
+                  className="text-muted-foreground hover:text-white"
+                >
+                  {task.isActive ? <ToggleRight className="w-5 h-5 text-green-500" /> : <ToggleLeft className="w-5 h-5" />}
+                </button>
+                <button
+                  onClick={() => adminAction.mutate({ section: 'tasks', action: 'delete', data: { id: task.id } })}
+                  className="text-destructive hover:text-red-400"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Announcements Tab
+function AnnouncementsTab({ adminAction }: { adminAction: ReturnType<typeof useAdminAction> }) {
+  const { data, isLoading } = useAdminData('announcements');
+  const [showNew, setShowNew] = useState(false);
+  const [newAnn, setNewAnn] = useState({ title: '', message: '', isImportant: false, notifyAll: true });
+
+  if (isLoading) return <LoadingSpinner />;
+
+  return (
+    <div className="space-y-3">
+      <Button onClick={() => setShowNew(!showNew)} className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white">
+        <Plus className="w-4 h-4 mr-1" />
+        New Announcement
+      </Button>
+
+      {showNew && (
+        <div className="rounded-xl p-4 bg-card border border-border space-y-3">
+          <Input placeholder="Title" value={newAnn.title} onChange={(e) => setNewAnn({ ...newAnn, title: e.target.value })} className="bg-secondary border-border text-white" />
+          <Textarea placeholder="Message" value={newAnn.message} onChange={(e) => setNewAnn({ ...newAnn, message: e.target.value })} className="bg-secondary border-border text-white min-h-[80px]" />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch checked={newAnn.isImportant} onCheckedChange={(v) => setNewAnn({ ...newAnn, isImportant: v })} />
+              <Label className="text-sm text-muted-foreground">Important</Label>
             </div>
             <div className="flex items-center gap-2">
-              <Input type="color" value={form.color} onChange={(e) => setForm({...form, color: e.target.value})} className="w-10 h-8 p-0 border-0" />
-              <Input value={form.color} onChange={(e) => setForm({...form, color: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
+              <Switch checked={newAnn.notifyAll} onCheckedChange={(v) => setNewAnn({ ...newAnn, notifyAll: v })} />
+              <Label className="text-sm text-muted-foreground">Notify All</Label>
             </div>
-            <div className="flex gap-2">
-              <Button size="sm" className="bg-primary flex-1" onClick={handleCreate}>Create</Button>
-              <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading ? <LoadingSpinner /> : (
-        <div className="space-y-2">
-          {roles.map((role) => (
-            <Card key={role.id as string} className="bg-secondary/20 border-border/30">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: role.color as string }} />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">{role.name as string}</p>
-                  <p className="text-xs text-muted-foreground">{role.minReferrals as number} refs • {(role.miningBoost as number)}x boost</p>
-                </div>
-                <span className="text-xs text-muted-foreground">{(role._count as Record<string, number>)?.users || 0} users</span>
-                <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => handleDelete(role.id as string)}>
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => { adminAction.mutate({ section: 'announcements', action: 'create', data: newAnn }); setShowNew(false); }} className="flex-1 bg-[#2563EB] text-white text-sm">
+              <Send className="w-3 h-3 mr-1" />
+              Publish
+            </Button>
+            <Button onClick={() => setShowNew(false)} variant="outline" className="flex-1 border-border text-sm">Cancel</Button>
+          </div>
         </div>
       )}
+
+      <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+        {(data?.announcements || []).map((ann: {
+          id: string;
+          title: string;
+          message: string;
+          isImportant: boolean;
+          isActive: boolean;
+        }) => (
+          <div key={ann.id} className="rounded-xl p-3 bg-card border border-border">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-white truncate">{ann.title}</p>
+                  {ann.isImportant && <span className="text-[10px] bg-[#F59E0B]/20 text-[#F59E0B] px-1.5 py-0.5 rounded-full">Important</span>}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{ann.message}</p>
+              </div>
+              <div className="flex items-center gap-1 ml-2">
+                <button
+                  onClick={() => adminAction.mutate({ section: 'announcements', action: 'toggle', data: { id: ann.id } })}
+                  className="text-muted-foreground hover:text-white"
+                >
+                  {ann.isActive ? <ToggleRight className="w-5 h-5 text-green-500" /> : <ToggleLeft className="w-5 h-5" />}
+                </button>
+                <button onClick={() => adminAction.mutate({ section: 'announcements', action: 'delete', data: { id: ann.id } })} className="text-destructive">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-// Settings Section
-function SettingsSection({ userId }: { userId: string }) {
-  const { data, loading } = useAdminFetch<{ settings: Array<Record<string, string>> }>('settings', userId);
-  const [settings, setSettings] = useState<Array<Record<string, string>>>([]);
-  const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
+// Vault Tab
+function VaultTab({ adminAction }: { adminAction: ReturnType<typeof useAdminAction> }) {
+  const { data, isLoading } = useAdminData('vault_campaigns');
+  const [showNew, setShowNew] = useState(false);
+  const [newCamp, setNewCamp] = useState({ title: '', description: '', totalPool: 0 });
 
-  useEffect(() => {
+  if (isLoading) return <LoadingSpinner />;
+
+  return (
+    <div className="space-y-3">
+      <Button onClick={() => setShowNew(!showNew)} className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white">
+        <Plus className="w-4 h-4 mr-1" /> New Campaign
+      </Button>
+
+      {showNew && (
+        <div className="rounded-xl p-4 bg-card border border-border space-y-3">
+          <Input placeholder="Title" value={newCamp.title} onChange={(e) => setNewCamp({ ...newCamp, title: e.target.value })} className="bg-secondary border-border text-white" />
+          <Input placeholder="Description" value={newCamp.description} onChange={(e) => setNewCamp({ ...newCamp, description: e.target.value })} className="bg-secondary border-border text-white" />
+          <Input placeholder="Total Pool" type="number" value={newCamp.totalPool} onChange={(e) => setNewCamp({ ...newCamp, totalPool: parseFloat(e.target.value) || 0 })} className="bg-secondary border-border text-white" />
+          <div className="flex gap-2">
+            <Button onClick={() => { adminAction.mutate({ section: 'vault_campaigns', action: 'create', data: newCamp }); setShowNew(false); }} className="flex-1 bg-[#2563EB] text-white text-sm">Create</Button>
+            <Button onClick={() => setShowNew(false)} variant="outline" className="flex-1 border-border text-sm">Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {(data?.campaigns || []).map((camp: {
+          id: string;
+          title: string;
+          description: string;
+          totalPool: number;
+          isActive: boolean;
+          _count: { vaultRewards: number };
+        }) => (
+          <div key={camp.id} className="rounded-xl p-3 bg-card border border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white">{camp.title}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-[#F59E0B]">Pool: ${camp.totalPool}</span>
+                  <span className="text-xs text-muted-foreground">{camp._count.vaultRewards} rewards</span>
+                </div>
+              </div>
+              <button onClick={() => adminAction.mutate({ section: 'vault_campaigns', action: 'delete', data: { id: camp.id } })} className="text-destructive">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Roles Tab
+function RolesTab({ adminAction }: { adminAction: ReturnType<typeof useAdminAction> }) {
+  const { data, isLoading } = useAdminData('roles');
+
+  if (isLoading) return <LoadingSpinner />;
+
+  return (
+    <div className="space-y-2">
+      {(data?.roles || []).map((role: {
+        id: string;
+        name: string;
+        minReferrals: number;
+        miningBoost: number;
+        color: string;
+        icon: string;
+        _count: { users: number };
+      }) => (
+        <div key={role.id} className="rounded-xl p-3 bg-card border border-border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{role.icon}</span>
+              <div>
+                <p className="text-sm font-medium text-white">{role.name}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-muted-foreground">{role.minReferrals} refs</span>
+                  <span className="text-xs text-muted-foreground">{role.miningBoost}x boost</span>
+                  <span className="text-xs text-muted-foreground">{role._count.users} users</span>
+                </div>
+              </div>
+            </div>
+            <div className="w-5 h-5 rounded-full border border-border" style={{ backgroundColor: role.color }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Settings Tab
+function SettingsTab({ adminAction }: { adminAction: ReturnType<typeof useAdminAction> }) {
+  const { data, isLoading } = useAdminData('settings');
+  const [localSettings, setLocalSettings] = useState<Record<string, string>>({});
+
+  React.useEffect(() => {
     if (data?.settings) {
-      setSettings(data.settings);
+      const map: Record<string, string> = {};
+      for (const s of data.settings) {
+        map[s.key] = s.value;
+      }
+      setLocalSettings(map);
     }
   }, [data]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'update_settings', adminId: userId,
-          settings: settings.map(s => ({ key: s.key, value: s.value, description: s.description })),
-        }),
-      });
-      if (res.ok) { toast({ title: 'Settings saved' }); }
-    } catch { toast({ title: 'Error', variant: 'destructive' }); }
-    finally { setSaving(false); }
+  if (isLoading) return <LoadingSpinner />;
+
+  const categories: Record<string, Array<{ key: string; description: string }>> = {};
+  for (const s of data?.settings || []) {
+    if (!categories[s.category]) categories[s.category] = [];
+    categories[s.category].push({ key: s.key, description: s.description });
+  }
+
+  const handleSave = () => {
+    const settings = Object.entries(localSettings).map(([key, value]) => ({ key, value }));
+    adminAction.mutate({ section: 'settings', action: 'update', data: { settings } });
   };
 
-  if (loading || settings.length === 0) return <LoadingSpinner />;
-
   return (
-    <div className="space-y-3">
-      {settings.map((setting, i) => (
-        <div key={setting.key} className="space-y-1">
-          <Label className="text-xs text-muted-foreground">{setting.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Label>
-          <Input
-            value={setting.value}
-            onChange={(e) => {
-              const next = [...settings];
-              next[i] = { ...next[i], value: e.target.value };
-              setSettings(next);
-            }}
-            className="bg-secondary/50 border-border/50 text-sm"
-          />
-          <p className="text-[10px] text-muted-foreground">{setting.description}</p>
+    <div className="space-y-4">
+      {Object.entries(categories).map(([category, items]) => (
+        <div key={category} className="rounded-xl p-4 bg-card border border-border">
+          <h4 className="text-sm font-semibold text-white mb-3 capitalize">{category}</h4>
+          <div className="space-y-3">
+            {items.map((item) => (
+              <div key={item.key} className="space-y-1">
+                <label className="text-xs text-muted-foreground">{item.key.replace(/_/g, ' ')}</label>
+                <Input
+                  value={localSettings[item.key] ?? ''}
+                  onChange={(e) => setLocalSettings({ ...localSettings, [item.key]: e.target.value })}
+                  className="bg-secondary border-border text-white text-sm"
+                />
+                <p className="text-[10px] text-muted-foreground/60">{item.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
-      <Button className="w-full bg-primary" onClick={handleSave} disabled={saving}>
-        {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-        Save Settings
+
+      <Button onClick={handleSave} className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white">
+        <Save className="w-4 h-4 mr-2" />
+        Save All Settings
       </Button>
     </div>
   );
 }
 
-// Ads Section
-function AdsSection({ userId }: { userId: string }) {
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ position: 'home_banner', adType: 'banner', title: '', imageUrl: '', linkUrl: '', htmlCode: '' });
-  const { data, loading, refresh } = useAdminFetch<{ ads: Array<Record<string, unknown>> }>('ads', userId);
-  const { toast } = useToast();
+// Ads Tab
+function AdsTab({ adminAction }: { adminAction: ReturnType<typeof useAdminAction> }) {
+  const { data, isLoading } = useAdminData('ads');
+  const [showNew, setShowNew] = useState(false);
+  const [newAd, setNewAd] = useState({ position: 'home_banner', adType: 'banner', title: '', imageUrl: '', linkUrl: '', htmlCode: '', isActive: true });
 
-  const ads = data?.ads || [];
-
-  const handleCreate = async () => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_ad', adminId: userId, ...form }),
-      });
-      if (res.ok) { toast({ title: 'Ad created' }); setShowForm(false); refresh(); }
-    } catch { toast({ title: 'Error', variant: 'destructive' }); }
-  };
-
-  const handleDelete = async (adId: string) => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_ad', adminId: userId, adId }),
-      });
-      if (res.ok) { toast({ title: 'Ad deleted' }); refresh(); }
-    } catch { toast({ title: 'Error', variant: 'destructive' }); }
-  };
-
-  const handleToggle = async (adId: string, isActive: boolean) => {
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_ad', adminId: userId, adId, isActive: !isActive }),
-      });
-      if (res.ok) { toast({ title: 'Ad updated' }); refresh(); }
-    } catch { toast({ title: 'Error', variant: 'destructive' }); }
-  };
+  if (isLoading) return <LoadingSpinner />;
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{ads.length} ad placements</span>
-        <Button size="sm" className="bg-primary" onClick={() => setShowForm(!showForm)}>
-          <Plus className="w-4 h-4 mr-1" /> New
-        </Button>
-      </div>
+      <Button onClick={() => setShowNew(!showNew)} className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white">
+        <Plus className="w-4 h-4 mr-1" /> New Ad Placement
+      </Button>
 
-      {showForm && (
-        <Card className="bg-secondary/20 border-border/30">
-          <CardContent className="p-3 space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs text-muted-foreground">Position</Label>
-                <Input placeholder="home_banner" value={form.position} onChange={(e) => setForm({...form, position: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Type</Label>
-                <Input placeholder="banner" value={form.adType} onChange={(e) => setForm({...form, adType: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-              </div>
-            </div>
-            <Input placeholder="Ad title" value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            <Input placeholder="Image URL" value={form.imageUrl} onChange={(e) => setForm({...form, imageUrl: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            <Input placeholder="Link URL" value={form.linkUrl} onChange={(e) => setForm({...form, linkUrl: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" />
-            <Textarea placeholder="Custom HTML code (for AdSense, etc.)" value={form.htmlCode} onChange={(e) => setForm({...form, htmlCode: e.target.value})} className="bg-secondary/50 border-border/50 text-sm" rows={3} />
-            <div className="flex gap-2">
-              <Button size="sm" className="bg-primary flex-1" onClick={handleCreate}>Create</Button>
-              <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading ? <LoadingSpinner /> : (
-        <div className="space-y-2">
-          {ads.map((ad) => (
-            <Card key={ad.id as string} className="bg-secondary/20 border-border/30">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{ad.title as string || 'Untitled'}</p>
-                    <p className="text-xs text-muted-foreground">{ad.position as string} • {ad.adType as string}</p>
-                  </div>
-                  <Switch checked={ad.isActive as boolean} onCheckedChange={() => handleToggle(ad.id as string, ad.isActive as boolean)} />
-                  <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => handleDelete(ad.id as string)}>
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      {showNew && (
+        <div className="rounded-xl p-4 bg-card border border-border space-y-3">
+          <Input placeholder="Position (home_banner, earn_banner, profile_banner)" value={newAd.position} onChange={(e) => setNewAd({ ...newAd, position: e.target.value })} className="bg-secondary border-border text-white" />
+          <Input placeholder="Title" value={newAd.title} onChange={(e) => setNewAd({ ...newAd, title: e.target.value })} className="bg-secondary border-border text-white" />
+          <Input placeholder="Image URL" value={newAd.imageUrl} onChange={(e) => setNewAd({ ...newAd, imageUrl: e.target.value })} className="bg-secondary border-border text-white" />
+          <Input placeholder="Link URL" value={newAd.linkUrl} onChange={(e) => setNewAd({ ...newAd, linkUrl: e.target.value })} className="bg-secondary border-border text-white" />
+          <Textarea placeholder="Custom HTML Code (for AdSense, etc.)" value={newAd.htmlCode} onChange={(e) => setNewAd({ ...newAd, htmlCode: e.target.value })} className="bg-secondary border-border text-white min-h-[80px]" />
+          <div className="flex gap-2">
+            <Button onClick={() => { adminAction.mutate({ section: 'ads', action: 'create', data: newAd }); setShowNew(false); }} className="flex-1 bg-[#2563EB] text-white text-sm">Create</Button>
+            <Button onClick={() => setShowNew(false)} variant="outline" className="flex-1 border-border text-sm">Cancel</Button>
+          </div>
         </div>
       )}
+
+      <div className="space-y-2">
+        {(data?.ads || []).map((ad: {
+          id: string;
+          position: string;
+          title: string;
+          adType: string;
+          isActive: boolean;
+          _count: { adViews: number };
+        }) => (
+          <div key={ad.id} className="rounded-xl p-3 bg-card border border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white">{ad.title || ad.position}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-muted-foreground">{ad.position}</span>
+                  <span className="text-xs text-muted-foreground">{ad.adType}</span>
+                  <span className="text-xs text-muted-foreground">{ad._count.adViews} views</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => adminAction.mutate({ section: 'ads', action: 'toggle', data: { id: ad.id } })}
+                  className="text-muted-foreground hover:text-white"
+                >
+                  {ad.isActive ? <ToggleRight className="w-5 h-5 text-green-500" /> : <ToggleLeft className="w-5 h-5" />}
+                </button>
+                <button onClick={() => adminAction.mutate({ section: 'ads', action: 'delete', data: { id: ad.id } })} className="text-destructive">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 function LoadingSpinner() {
   return (
-    <div className="flex justify-center py-8">
-      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+    <div className="flex justify-center py-12">
+      <div className="w-6 h-6 border-2 border-[#2563EB]/30 border-t-[#2563EB] rounded-full animate-spin" />
     </div>
   );
 }

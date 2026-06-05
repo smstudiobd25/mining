@@ -1,29 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
+    const userId = req.headers.get('x-user-id');
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const user = await db.user.findUnique({
       where: { id: userId },
       include: {
         role: true,
-        miningSessions: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-        referralReceived: true,
+        miningSessions: { orderBy: { createdAt: 'desc' }, take: 5 },
         _count: {
           select: {
             referralsMade: true,
-            taskCompletions: true,
             notifications: { where: { isRead: false } },
+            taskCompletions: true,
           },
         },
       },
@@ -34,25 +28,47 @@ export async function GET(request: NextRequest) {
     }
 
     if (user.isBanned) {
-      return NextResponse.json({ error: 'Account has been banned' }, { status: 403 });
+      return NextResponse.json({ error: 'Account is banned' }, { status: 403 });
     }
 
-    const { password: _, ...safeUser } = user;
-    return NextResponse.json({ user: safeUser });
+    return NextResponse.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar: user.avatar,
+      isAdmin: user.isAdmin,
+      roleId: user.roleId,
+      role: user.role,
+      nxrBalance: user.nxrBalance,
+      vaultBalance: user.vaultBalance,
+      miningDays: user.miningDays,
+      tasksCompleted: user.tasksCompleted,
+      streak: user.streak,
+      bestStreak: user.bestStreak,
+      referralCode: user.referralCode,
+      lastMiningDate: user.lastMiningDate,
+      adViewsToday: user.adViewsToday,
+      lastAdViewDate: user.lastAdViewDate,
+      miningSessions: user.miningSessions,
+      referralCount: user._count.referralsMade,
+      unreadNotifications: user._count.notifications,
+      createdAt: user.createdAt,
+    });
   } catch (error) {
-    console.error('User fetch error:', error);
+    console.error('User GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-export async function PUT(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, name, avatar } = body;
-
+    const userId = req.headers.get('x-user-id');
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const body = await req.json();
+    const { name, avatar } = body;
 
     const updateData: Record<string, unknown> = {};
     if (name) updateData.name = name;
@@ -64,10 +80,24 @@ export async function PUT(request: NextRequest) {
       include: { role: true },
     });
 
-    const { password: _, ...safeUser } = user;
-    return NextResponse.json({ user: safeUser, message: 'Profile updated' });
+    return NextResponse.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar: user.avatar,
+      isAdmin: user.isAdmin,
+      roleId: user.roleId,
+      role: user.role,
+      nxrBalance: user.nxrBalance,
+      vaultBalance: user.vaultBalance,
+      miningDays: user.miningDays,
+      tasksCompleted: user.tasksCompleted,
+      streak: user.streak,
+      bestStreak: user.bestStreak,
+      referralCode: user.referralCode,
+    });
   } catch (error) {
-    console.error('User update error:', error);
+    console.error('User POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

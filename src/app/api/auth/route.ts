@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-function generateReferralCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = 'NEXORA-';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await req.json();
     const { action } = body;
 
     if (action === 'login') {
@@ -31,11 +22,27 @@ export async function POST(request: NextRequest) {
       }
 
       if (user.isBanned) {
-        return NextResponse.json({ error: 'Account has been banned' }, { status: 403 });
+        return NextResponse.json({ error: 'Account is banned' }, { status: 403 });
       }
 
-      const { password: _, ...safeUser } = user;
-      return NextResponse.json({ user: safeUser, message: 'Login successful' });
+      return NextResponse.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          isAdmin: user.isAdmin,
+          roleId: user.roleId,
+          role: user.role,
+          nxrBalance: user.nxrBalance,
+          vaultBalance: user.vaultBalance,
+          miningDays: user.miningDays,
+          tasksCompleted: user.tasksCompleted,
+          streak: user.streak,
+          bestStreak: user.bestStreak,
+          referralCode: user.referralCode,
+        },
+      });
     }
 
     if (action === 'signup') {
@@ -44,22 +51,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
       }
 
-      const existingUser = await db.user.findUnique({
-        where: { email: email.toLowerCase() },
-      });
-
-      if (existingUser) {
+      const existing = await db.user.findUnique({ where: { email: email.toLowerCase() } });
+      if (existing) {
         return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
-      }
-
-      let referrerId: string | null = null;
-      if (referralCode) {
-        const referrer = await db.user.findUnique({
-          where: { referralCode },
-        });
-        if (referrer) {
-          referrerId = referrer.id;
-        }
       }
 
       // Get welcome bonus setting
@@ -70,85 +64,120 @@ export async function POST(request: NextRequest) {
       const referralBonusSetting = await db.setting.findUnique({ where: { key: 'referral_bonus' } });
       const referralBonus = referralBonusSetting ? parseFloat(referralBonusSetting.value) : 25;
 
+      // Get explorer role
+      const explorerRole = await db.role.findUnique({ where: { name: 'Explorer' } });
+
+      // Generate unique referral code
+      const code = 'NEXORA-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      let referredBy = null;
+      let referrerUser = null;
+
+      // Check referral code
+      if (referralCode) {
+        referrerUser = await db.user.findUnique({ where: { referralCode } });
+        if (referrerUser) {
+          referredBy = referrerUser.id;
+        }
+      }
+
       const user = await db.user.create({
         data: {
           email: email.toLowerCase(),
           name: name || 'User',
           password,
-          referralCode: generateReferralCode(),
-          referredBy: referrerId ? (await db.user.findUnique({ where: { id: referrerId } }))?.referralCode || null : null,
+          referralCode: code,
+          referredBy,
+          roleId: explorerRole?.id || 'explorer',
           nxrBalance: welcomeBonus,
-          roleId: 'role-explorer',
         },
         include: { role: true },
       });
 
-      // Give referral bonus
-      if (referrerId) {
-        await db.user.update({
-          where: { id: referrerId },
-          data: { nxrBalance: { increment: referralBonus } },
-        });
-
+      // Create referral record and bonus
+      if (referrerUser) {
         await db.referral.create({
           data: {
-            referrerId,
+            referrerId: referrerUser.id,
             referredId: user.id,
             bonusGiven: true,
           },
         });
 
-        // Create notification for referrer
+        // Give referrer bonus
+        await db.user.update({
+          where: { id: referrerUser.id },
+          data: { nxrBalance: { increment: referralBonus } },
+        });
+
+        // Notify referrer
         await db.notification.create({
           data: {
-            userId: referrerId,
+            userId: referrerUser.id,
             title: 'New Referral!',
-            message: `Someone joined using your referral code! You earned ${referralBonus} NXR.`,
+            message: `${user.name} joined using your referral code! You earned ${referralBonus} NXR.`,
             type: 'referral',
           },
         });
 
-        // Update referrer's role based on referral count
-        const referrerRefCount = await db.referral.count({ where: { referrerId } });
-        const roles = await db.role.findMany({ orderBy: { minReferrals: 'desc' } });
+        // Check if referrer should be promoted
+        const referrerRefCount = await db.referral.count({ where: { referrerId: referrerUser.id } });
+        const roles = await db.role.findMany({ orderBy: { minReferrals: 'asc' } });
         for (const role of roles) {
           if (referrerRefCount >= role.minReferrals) {
             await db.user.update({
-              where: { id: referrerId },
+              where: { id: referrerUser.id },
               data: { roleId: role.id },
             });
-            break;
           }
         }
       }
 
-      // Create welcome notification
+      // Welcome notification
       await db.notification.create({
         data: {
           userId: user.id,
-          title: 'Welcome Bonus!',
-          message: `You received ${welcomeBonus} NXR as a welcome bonus! Start mining to earn more.`,
-          type: 'reward',
+          title: 'Welcome to Nexora! 🎉',
+          message: `You've received ${welcomeBonus} NXR as a welcome bonus. Start mining to earn more!`,
+          type: 'system',
         },
       });
 
-      const { password: _, ...safeUser } = user;
-      return NextResponse.json({ user: safeUser, message: 'Account created successfully' });
+      return NextResponse.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          isAdmin: user.isAdmin,
+          roleId: user.roleId,
+          role: user.role,
+          nxrBalance: user.nxrBalance,
+          vaultBalance: user.vaultBalance,
+          miningDays: user.miningDays,
+          tasksCompleted: user.tasksCompleted,
+          streak: user.streak,
+          bestStreak: user.bestStreak,
+          referralCode: user.referralCode,
+        },
+      });
     }
 
     if (action === 'guest') {
-      const guestCode = generateReferralCode();
+      const explorerRole = await db.role.findUnique({ where: { name: 'Explorer' } });
       const welcomeBonusSetting = await db.setting.findUnique({ where: { key: 'welcome_bonus' } });
       const welcomeBonus = welcomeBonusSetting ? parseFloat(welcomeBonusSetting.value) : 100;
 
+      const guestNum = Math.floor(Math.random() * 99999);
+      const code = 'NEXORA-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
       const user = await db.user.create({
         data: {
-          email: `guest_${Date.now()}@nexora.io`,
-          name: 'Guest',
-          password: 'guest',
-          referralCode: guestCode,
+          email: `guest-${guestNum}@nexora.guest`,
+          name: `Guest ${guestNum}`,
+          roleId: explorerRole?.id || 'explorer',
+          referralCode: code,
           nxrBalance: welcomeBonus,
-          roleId: 'role-explorer',
         },
         include: { role: true },
       });
@@ -156,14 +185,34 @@ export async function POST(request: NextRequest) {
       await db.notification.create({
         data: {
           userId: user.id,
-          title: 'Welcome to Nexora!',
-          message: `You received ${welcomeBonus} NXR as a welcome bonus! Start mining to earn more.`,
-          type: 'reward',
+          title: 'Welcome to Nexora! 🎉',
+          message: `You've received ${welcomeBonus} NXR as a welcome bonus. Start mining to earn more!`,
+          type: 'system',
         },
       });
 
-      const { password: _, ...safeUser } = user;
-      return NextResponse.json({ user: safeUser, message: 'Guest account created' });
+      return NextResponse.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          isAdmin: user.isAdmin,
+          roleId: user.roleId,
+          role: user.role,
+          nxrBalance: user.nxrBalance,
+          vaultBalance: user.vaultBalance,
+          miningDays: user.miningDays,
+          tasksCompleted: user.tasksCompleted,
+          streak: user.streak,
+          bestStreak: user.bestStreak,
+          referralCode: user.referralCode,
+        },
+      });
+    }
+
+    if (action === 'forgot') {
+      return NextResponse.json({ message: 'If an account with that email exists, a reset link will be sent.' });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
