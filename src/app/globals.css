@@ -529,3 +529,345 @@ input:focus, textarea:focus {
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 0 20px rgba(59, 130, 246, 0.04);
 }
+
+/* ══════════════════════════════════════ */
+/* 🔐 AUTH HYPER STYLES                   */
+/* ══════════════════════════════════════ */
+
+.auth-hyper-bg {
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(59, 130, 246, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 90% 30%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+    radial-gradient(ellipse 80% 50% at 10% 70%, rgba(6, 182, 212, 0.1) 0%, transparent 40%),
+    radial-gradient(ellipse 100% 60% at 50% 110%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    linear-gradient(180deg, #020408 0%, #050A14 25%, #070E1C 50%, #050A14 75%, #020408 100%);
+  min-height: 100vh;
+}
+
+.auth-logo-holo {
+  background: linear-gradient(135deg, #0C1425, #0F1B36);
+  box-shadow:
+    0 0 40px rgba(59, 130, 246, 0.3),
+    0 0 80px rgba(59, 130, 246, 0.15),
+    0 0 120px rgba(139, 92, 246, 0.08),
+    inset 0 2px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.auth-bonus-badge {
+  background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.08), rgba(6,182,212,0.06));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #60A5FA;
+  box-shadow:
+    0 0 20px rgba(59, 130, 246, 0.1),
+    0 0 40px rgba(139, 92, 246, 0.05),
+    inset 0 0 12px rgba(59, 130, 246, 0.05);
+}
+
+.auth-card-hyper {
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.04), rgba(139, 92, 246, 0.02)),
+    linear-gradient(145deg, rgba(8, 12, 24, 0.98) 0%, rgba(12, 20, 37, 0.96) 50%, rgba(15, 27, 54, 0.94) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 80px rgba(59, 130, 246, 0.05),
+    0 0 160px rgba(139, 92, 246, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.auth-card-hyper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(59, 130, 246, 0.3) 20%,
+    rgba(139, 92, 246, 0.4) 50%,
+    rgba(6, 182, 212, 0.3) 80%,
+    transparent 100%
+  );
+}
+
+.auth-tab-container {
+  background: rgba(59, 130, 246, 0.04);
+  border: 1px solid rgba(59, 130, 246, 0.06);
+  position: relative;
+}
+
+.auth-tab-indicator {
+  background: linear-gradient(135deg, #3B82F6, #2563EB, #1D4ED8);
+  box-shadow:
+    0 4px 15px rgba(59, 130, 246, 0.3),
+    0 0 30px rgba(59, 130, 246, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.auth-input-hyper {
+  background: rgba(8, 12, 24, 0.8) !important;
+  border: 1px solid rgba(59, 130, 246, 0.08) !important;
+  color: white !important;
+  transition: all 0.2s ease;
+}
+
+.auth-input-hyper:focus {
+  background: rgba(12, 20, 37, 0.9) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+  box-shadow:
+    0 0 0 3px rgba(59, 130, 246, 0.1),
+    0 0 30px rgba(59, 130, 246, 0.06) !important;
+}
+
+.auth-input-hyper::placeholder {
+  color: rgba(100, 116, 139, 0.5) !important;
+}
+
+.auth-error-box {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  color: #F87171;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.05);
+}
+
+.auth-google-btn {
+  background: rgba(8, 12, 24, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.auth-google-btn:hover:not(:disabled) {
+  background: rgba(12, 20, 37, 0.8);
+  border-color: rgba(59, 130, 246, 0.15);
+}
+
+.btn-hyper-ultra {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 30%, #1D4ED8 60%, #1E40AF 100%);
+  box-shadow:
+    0 4px 20px rgba(59, 130, 246, 0.4),
+    0 0 50px rgba(59, 130, 246, 0.12),
+    0 0 100px rgba(59, 130, 246, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-hyper-ultra::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  transition: left 0.6s ease;
+}
+
+.btn-hyper-ultra:hover::before {
+  left: 100%;
+}
+
+.btn-hyper-ultra:hover {
+  box-shadow:
+    0 6px 30px rgba(59, 130, 246, 0.55),
+    0 0 80px rgba(59, 130, 246, 0.2),
+    0 0 140px rgba(59, 130, 246, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.btn-hyper-ultra:active {
+  transform: translateY(0);
+  box-shadow:
+    0 2px 12px rgba(59, 130, 246, 0.35),
+    0 0 30px rgba(59, 130, 246, 0.1);
+}
+
+/* ══════════════════════════════════════ */
+/* 🛡️ ADMIN PANEL HYPER STYLES           */
+/* ══════════════════════════════════════ */
+
+.admin-panel-bg {
+  background:
+    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 90% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 10% 60%, rgba(6, 182, 212, 0.04) 0%, transparent 50%),
+    linear-gradient(180deg, #030508 0%, #060A14 50%, #030508 100%);
+}
+
+.admin-header-border {
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  background: rgba(3, 5, 8, 0.8);
+  backdrop-filter: blur(20px);
+}
+
+.admin-tabs-border {
+  border-bottom: 1px solid rgba(59, 130, 246, 0.06);
+  background: rgba(3, 5, 8, 0.5);
+}
+
+.admin-tab-active {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  box-shadow:
+    0 0 20px rgba(59, 130, 246, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: white;
+}
+
+.admin-welcome-banner {
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.06)),
+    linear-gradient(145deg, rgba(8, 12, 24, 0.95), rgba(15, 27, 54, 0.9));
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(59, 130, 246, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.admin-stat-card {
+  background: linear-gradient(145deg, rgba(8, 12, 24, 0.95), rgba(15, 27, 54, 0.6));
+  border: 1px solid rgba(59, 130, 246, 0.08);
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: all 0.3s ease;
+}
+
+.admin-stat-card:hover {
+  border-color: rgba(59, 130, 246, 0.18);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(59, 130, 246, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+}
+
+.admin-item-card {
+  background: linear-gradient(145deg, rgba(8, 12, 24, 0.9), rgba(12, 20, 37, 0.7));
+  border: 1px solid rgba(59, 130, 246, 0.06);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  transition: all 0.2s ease;
+}
+
+.admin-item-card:hover {
+  background: linear-gradient(145deg, rgba(8, 12, 24, 0.95), rgba(15, 27, 54, 0.8));
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.35),
+    0 0 20px rgba(59, 130, 246, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.admin-create-card {
+  background: linear-gradient(145deg, rgba(8, 12, 24, 0.95), rgba(15, 27, 54, 0.8));
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(59, 130, 246, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.admin-input-hyper {
+  background: rgba(8, 12, 24, 0.8) !important;
+  border: 1px solid rgba(59, 130, 246, 0.08) !important;
+  color: white !important;
+  transition: all 0.2s ease;
+}
+
+.admin-input-hyper:focus {
+  background: rgba(12, 20, 37, 0.9) !important;
+  border-color: rgba(59, 130, 246, 0.2) !important;
+  box-shadow:
+    0 0 0 2px rgba(59, 130, 246, 0.1),
+    0 0 20px rgba(59, 130, 246, 0.04) !important;
+}
+
+.admin-input-hyper::placeholder {
+  color: rgba(100, 116, 139, 0.45) !important;
+}
+
+.admin-btn-success {
+  border-color: rgba(16, 185, 129, 0.2) !important;
+  background: rgba(16, 185, 129, 0.06) !important;
+  color: #34D399 !important;
+  transition: all 0.2s ease;
+}
+
+.admin-btn-success:hover {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+}
+
+.admin-btn-danger {
+  border-color: rgba(239, 68, 68, 0.2) !important;
+  background: rgba(239, 68, 68, 0.06) !important;
+  color: #F87171 !important;
+  transition: all 0.2s ease;
+}
+
+.admin-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.1);
+}
+
+.admin-btn-ghost {
+  border-color: rgba(59, 130, 246, 0.08);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s ease;
+}
+
+.admin-btn-ghost:hover {
+  background: rgba(59, 130, 246, 0.06);
+  border-color: rgba(59, 130, 246, 0.12);
+  color: white;
+}
+
+/* ══════════════════════════════════════ */
+/* 🌟 ADDITIONAL HYPER ANIMATIONS        */
+/* ══════════════════════════════════════ */
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes border-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-float-y {
+  animation: float-y 3s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
