@@ -1,0 +1,21 @@
+{
+  "name": "Nexora Network",
+  "short_name": "Nexora",
+  "description": "Mine Activity. Earn Rewards. Grow Together.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0F1C",
+  "theme_color": "#2563EB",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/nexora-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "lifestyle"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

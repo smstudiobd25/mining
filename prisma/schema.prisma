@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String   @default("User")
+  avatar          String?
+  roleId          String   @default("default-role")
+  referralCode    String   @unique
+  referredBy      String?
+  nxrBalance      Float    @default(0)
+  vaultBalance    Float    @default(0)
+  miningDays      Int      @default(0)
+  tasksCompleted  Int      @default(0)
+  streak          Int      @default(0)
+  lastMiningDate  String?
+  isBanned        Boolean  @default(false)
+  isAdmin         Boolean  @default(false)
+  adViewsToday    Int      @default(0)
+  lastAdViewDate  String?
+  password        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  role             Role             @relation(fields: [roleId], references: [id])
+  miningSessions   MiningSession[]
+  referralsMade    Referral[]       @relation("Referrer")
+  referralReceived Referral?        @relation("Referred")
+  taskCompletions  TaskCompletion[]
+  notifications    Notification[]
+  vaultRewards     VaultReward[]
+  adViews          AdView[]
+
+  @@map("users")
+}
+
+model Role {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  minReferrals  Int      @default(0)
+  miningBoost   Float    @default(1.0)
+  color         String   @default("#2563EB")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users         User[]
+
+  @@map("roles")
+}
+
+model MiningSession {
+  id            String   @id @default(cuid())
+  userId        String
+  startedAt     DateTime
+  endsAt        DateTime
+  claimed       Boolean  @default(false)
+  claimedAt     DateTime?
+  rewardAmount  Float    @default(0)
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@map("mining_sessions")
+}
+
+model Referral {
+  id          String   @id @default(cuid())
+  referrerId  String
+  referredId  String   @unique
+  bonusGiven  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  referrer    User     @relation("Referrer", fields: [referrerId], references: [id])
+  referred    User     @relation("Referred", fields: [referredId], references: [id])
+
+  @@map("referrals")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  type        String   @default("social")
+  url         String   @default("")
+  nxrReward   Float    @default(20)
+  vaultReward Float    @default(0.02)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  completions TaskCompletion[]
+
+  @@map("tasks")
+}
+
+model TaskCompletion {
+  id          String   @id @default(cuid())
+  userId      String
+  taskId      String
+  completedAt DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+  task        Task     @relation(fields: [taskId], references: [id])
+
+  @@unique([userId, taskId])
+  @@map("task_completions")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("system")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  message     String
+  isImportant Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("announcements")
+}
+
+model RewardVaultCampaign {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  totalPool   Float    @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vaultRewards VaultReward[]
+
+  @@map("reward_vault_campaigns")
+}
+
+model VaultReward {
+  id          String   @id @default(cuid())
+  userId      String
+  campaignId  String
+  amount      Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  user        User                @relation(fields: [userId], references: [id])
+  campaign    RewardVaultCampaign @relation(fields: [campaignId], references: [id])
+
+  @@map("vault_rewards")
+}
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  details   String   @default("")
+  createdAt DateTime @default(now())
+
+  @@map("admin_logs")
+}
+
+model Setting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model AdPlacement {
+  id          String   @id @default(cuid())
+  position    String
+  adType      String   @default("banner")
+  title       String   @default("")
+  imageUrl    String   @default("")
+  linkUrl     String   @default("")
+  htmlCode    String   @default("")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  adViews     AdView[]
+
+  @@map("ad_placements")
+}
+
+model AdView {
+  id             String   @id @default(cuid())
+  userId         String
+  adPlacementId  String
+  rewardGiven    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  user           User          @relation(fields: [userId], references: [id])
+  adPlacement    AdPlacement   @relation(fields: [adPlacementId], references: [id])
+
+  @@map("ad_views")
+}

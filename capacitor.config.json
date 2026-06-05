@@ -1,0 +1,23 @@
+{
+  "appId": "com.nexora.network",
+  "appName": "Nexora Network",
+  "webDir": "out",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#2563EB",
+      "sound": "default"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  },
+  "android": {
+    "backgroundColor": "#0A0F1C",
+    "allowMixedContent": true,
+    "captureInput": true
+  }
+}
