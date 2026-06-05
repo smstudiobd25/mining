@@ -400,7 +400,7 @@ function UsersTab({ adminAction }: { adminAction: ReturnType<typeof useAdminActi
 function TasksTab({ adminAction }: { adminAction: ReturnType<typeof useAdminAction> }) {
   const { data, isLoading } = useAdminData('tasks');
   const [showNew, setShowNew] = useState(false);
-  const [newTask, setNewTask] = useState({ title: '', description: '', type: 'social', url: '', nxrReward: 20, vaultReward: 0.02 });
+  const [newTask, setNewTask] = useState({ title: '', description: '', type: 'social', url: '', nxrReward: 20, vaultReward: 0.02, notifyUsers: true });
 
   if (isLoading) return <LoadingSpinner />;
 
@@ -426,6 +426,13 @@ function TasksTab({ adminAction }: { adminAction: ReturnType<typeof useAdminActi
               <Input placeholder="Vault Reward" type="number" step="0.01" value={newTask.vaultReward} onChange={(e) => setNewTask({ ...newTask, vaultReward: parseFloat(e.target.value) || 0 })} className="admin-input-hyper rounded-xl" />
             </div>
             <Input placeholder="URL" value={newTask.url} onChange={(e) => setNewTask({ ...newTask, url: e.target.value })} className="admin-input-hyper rounded-xl" />
+            <div className="flex items-center gap-3 py-1">
+              <Switch checked={newTask.notifyUsers} onCheckedChange={(v) => setNewTask({ ...newTask, notifyUsers: v })} />
+              <div>
+                <Label className="text-sm text-white font-medium">Notify All Users</Label>
+                <p className="text-[10px] text-muted-foreground/50">Send notification about this new task</p>
+              </div>
+            </div>
             <div className="flex gap-2">
               <Button onClick={() => { adminAction.mutate({ section: 'tasks', action: 'create', data: newTask }); setShowNew(false); }} className="flex-1 btn-hyper-ultra text-white text-sm h-10 rounded-xl">
                 Create

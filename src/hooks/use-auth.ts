@@ -25,6 +25,8 @@ interface UserData {
   streak: number;
   bestStreak: number;
   referralCode: string;
+  adViewsToday: number;
+  lastAdViewDate: string | null;
 }
 
 interface AuthState {

@@ -148,6 +148,18 @@ export async function POST(req: NextRequest) {
     if (section === 'tasks') {
       if (action === 'create') {
         const task = await db.task.create({ data });
+        // Send notifications to all users about the new task
+        if (data.notifyUsers !== false) {
+          const users = await db.user.findMany({ where: { isBanned: false }, select: { id: true } });
+          await db.notification.createMany({
+            data: users.map((u) => ({
+              userId: u.id,
+              title: `New Task: ${task.title} 🎯`,
+              message: `A new task is available! Earn ${task.nxrReward} NXR + $${task.vaultReward} Vault reward.`,
+              type: 'task',
+            })),
+          });
+        }
         return NextResponse.json({ task });
       }
       if (action === 'update') {

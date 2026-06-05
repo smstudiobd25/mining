@@ -1,35 +1,55 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, ExternalLink, CheckCircle2, Zap } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { useTasks, useCompleteTask, useWatchAdEarn } from '@/hooks/use-app-data';
+import { useTasks, useCompleteTask, useWatchAdEarn, useUserData } from '@/hooks/use-app-data';
 import { Button } from '@/components/ui/button';
 import { AdBanner } from './ad-banner';
 
 export function EarnPage() {
   const { user, updateUser } = useAuth();
+  const { data: freshUserData } = useUserData();
   const { data: tasksData, isLoading: tasksLoading } = useTasks();
   const completeTask = useCompleteTask();
   const watchAdEarn = useWatchAdEarn();
   const [showAdOverlay, setShowAdOverlay] = useState(false);
   const [adCountdown, setAdCountdown] = useState(5);
   const [adReward, setAdReward] = useState<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Use fresh data from API if available, fallback to auth store
+  const currentUser = freshUserData || user;
   const dailyLimit = 2;
   const today = new Date().toISOString().split('T')[0];
-  const adViewsToday = user?.lastAdViewDate === today ? (user?.adViewsToday ?? 0) : 0;
+  const adViewsToday = currentUser?.lastAdViewDate === today ? (currentUser?.adViewsToday ?? 0) : 0;
   const viewsRemaining = dailyLimit - adViewsToday;
+
+  // Sync fresh data to auth store
+  React.useEffect(() => {
+    if (freshUserData) {
+      updateUser({
+        nxrBalance: freshUserData.nxrBalance,
+        vaultBalance: freshUserData.vaultBalance,
+        adViewsToday: freshUserData.adViewsToday,
+        lastAdViewDate: freshUserData.lastAdViewDate,
+      });
+    }
+  }, [freshUserData, updateUser]);
 
   const handleWatchAd = useCallback(() => {
     if (viewsRemaining <= 0) return;
     setShowAdOverlay(true);
     setAdCountdown(5);
     setAdReward(null);
-    const interval = setInterval(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
       setAdCountdown((prev) => {
-        if (prev <= 1) { clearInterval(interval); return 0; }
+        if (prev <= 1) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          return 0;
+        }
         return prev - 1;
       });
     }, 1000);
@@ -40,17 +60,26 @@ export function EarnPage() {
       const result = await watchAdEarn.mutateAsync();
       setAdReward(result.reward);
       updateUser({
-        nxrBalance: (user?.nxrBalance ?? 0) + result.reward,
+        nxrBalance: (currentUser?.nxrBalance ?? 0) + result.reward,
         adViewsToday: adViewsToday + 1,
         lastAdViewDate: today,
       });
       setTimeout(() => { setShowAdOverlay(false); setAdReward(null); }, 1500);
-    } catch { setShowAdOverlay(false); }
-  }, [watchAdEarn, user, adViewsToday, today, updateUser]);
+    } catch {
+      setShowAdOverlay(false);
+    }
+  }, [watchAdEarn, currentUser, adViewsToday, today, updateUser]);
 
   React.useEffect(() => {
     if (adCountdown === 0 && showAdOverlay && adReward === null) handleAdComplete();
   }, [adCountdown, showAdOverlay, adReward, handleAdComplete]);
+
+  // Cleanup interval on unmount
+  React.useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   const handleCompleteTask = async (taskId: string) => {
     try { await completeTask.mutateAsync(taskId); } catch { /* handled */ }

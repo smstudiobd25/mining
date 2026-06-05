@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
           streak: user.streak,
           bestStreak: user.bestStreak,
           referralCode: user.referralCode,
+          adViewsToday: user.adViewsToday,
+          lastAdViewDate: user.lastAdViewDate,
         },
       });
     }
@@ -159,6 +161,8 @@ export async function POST(req: NextRequest) {
           streak: user.streak,
           bestStreak: user.bestStreak,
           referralCode: user.referralCode,
+          adViewsToday: user.adViewsToday,
+          lastAdViewDate: user.lastAdViewDate,
         },
       });
     }
@@ -207,6 +211,8 @@ export async function POST(req: NextRequest) {
           streak: user.streak,
           bestStreak: user.bestStreak,
           referralCode: user.referralCode,
+          adViewsToday: user.adViewsToday,
+          lastAdViewDate: user.lastAdViewDate,
         },
       });
     }
