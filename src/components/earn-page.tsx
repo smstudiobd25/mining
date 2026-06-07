@@ -1,12 +1,19 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, ExternalLink, CheckCircle2, Zap } from 'lucide-react';
+import { Eye, ExternalLink, CheckCircle2, Zap, Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useTasks, useCompleteTask, useWatchAdEarn, useUserData } from '@/hooks/use-app-data';
 import { Button } from '@/components/ui/button';
 import { AdBanner } from './ad-banner';
+
+type TaskStatus = 'idle' | 'visiting' | 'countdown' | 'claimable';
+
+interface TaskState {
+  status: TaskStatus;
+  countdown: number;
+}
 
 export function EarnPage() {
   const { user, updateUser } = useAuth();
@@ -19,6 +26,9 @@ export function EarnPage() {
   const [adReward, setAdReward] = useState<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Per-task state: track visiting/countdown/claimable
+  const [taskStates, setTaskStates] = useState<Record<string, TaskState>>({});
+
   // Use fresh data from API if available, fallback to auth store
   const currentUser = freshUserData || user;
   const dailyLimit = 2;
@@ -27,7 +37,7 @@ export function EarnPage() {
   const viewsRemaining = dailyLimit - adViewsToday;
 
   // Sync fresh data to auth store
-  React.useEffect(() => {
+  useEffect(() => {
     if (freshUserData) {
       updateUser({
         nxrBalance: freshUserData.nxrBalance,
@@ -38,6 +48,7 @@ export function EarnPage() {
     }
   }, [freshUserData, updateUser]);
 
+  // Ad watching logic
   const handleWatchAd = useCallback(() => {
     if (viewsRemaining <= 0) return;
     setShowAdOverlay(true);
@@ -70,20 +81,74 @@ export function EarnPage() {
     }
   }, [watchAdEarn, currentUser, adViewsToday, today, updateUser]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (adCountdown === 0 && showAdOverlay && adReward === null) handleAdComplete();
   }, [adCountdown, showAdOverlay, adReward, handleAdComplete]);
 
-  // Cleanup interval on unmount
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
 
-  const handleCompleteTask = async (taskId: string) => {
-    try { await completeTask.mutateAsync(taskId); } catch { /* handled */ }
-  };
+  // Task anti-cheat flow: Go → opens link + starts countdown → Claim
+  const handleVisitTask = useCallback(async (task: { id: string; url: string }) => {
+    // 1. Open the link in new tab
+    if (task.url) {
+      window.open(task.url, '_blank', 'noopener,noreferrer');
+    }
+
+    // 2. Record visit via PUT /api/tasks
+    setTaskStates((prev) => ({ ...prev, [task.id]: { status: 'visiting', countdown: 10 } }));
+
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user?.id || '',
+        },
+        body: JSON.stringify({ taskId: task.id }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (data.error?.includes('already completed')) {
+          return; // Already done
+        }
+      }
+    } catch {
+      // Continue countdown even if API call fails
+    }
+
+    // 3. Start 10-second countdown
+    setTaskStates((prev) => ({ ...prev, [task.id]: { status: 'countdown', countdown: 10 } }));
+
+    let count = 10;
+    const countdownInterval = setInterval(() => {
+      count -= 1;
+      if (count <= 0) {
+        clearInterval(countdownInterval);
+        setTaskStates((prev) => ({ ...prev, [task.id]: { status: 'claimable', countdown: 0 } }));
+      } else {
+        setTaskStates((prev) => ({ ...prev, [task.id]: { ...prev[task.id], countdown: count } }));
+      }
+    }, 1000);
+  }, [user]);
+
+  const handleClaimTask = useCallback(async (taskId: string) => {
+    try {
+      await completeTask.mutateAsync(taskId);
+      // Remove from task states on success
+      setTaskStates((prev) => {
+        const copy = { ...prev };
+        delete copy[taskId];
+        return copy;
+      });
+    } catch {
+      // Error handled by mutation
+    }
+  }, [completeTask]);
 
   return (
     <div className="pb-20 px-4 pt-5 space-y-4 max-w-lg mx-auto">
@@ -196,67 +261,80 @@ export function EarnPage() {
             {tasksData?.tasks?.map((task: {
               id: string; title: string; description: string; url: string;
               nxrReward: number; vaultReward: number; completed: boolean;
-            }) => (
-              <div
-                key={task.id}
-                className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 ${
-                  task.completed
-                    ? 'opacity-50'
-                    : ''
-                }`}
-                style={{
-                  background: task.completed
-                    ? 'rgba(34,197,94,0.03)'
-                    : 'linear-gradient(145deg, rgba(8,12,24,0.6), rgba(15,27,54,0.4))',
-                  borderColor: task.completed ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.08)',
-                }}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold ${task.completed ? 'text-muted-foreground line-through' : 'text-white'}`}>
-                    {task.title}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground/50 truncate">{task.description}</p>
-                  <div className="flex items-center gap-2.5 mt-1.5">
-                    <span
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                      style={{ background: 'rgba(59,130,246,0.1)', color: '#60A5FA' }}
-                    >
-                      +{task.nxrReward} NXR
-                    </span>
-                    <span
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                      style={{ background: 'rgba(245,158,11,0.1)', color: '#F59E0B' }}
-                    >
-                      +${task.vaultReward.toFixed(2)} Vault
-                    </span>
-                  </div>
-                </div>
-                {task.completed ? (
-                  <CheckCircle2 className="w-6 h-6 text-green-500/60 flex-shrink-0" />
-                ) : (
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {task.url && (
-                      <a
-                        href={task.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground/50 hover:text-white transition-colors"
+            }) => {
+              const taskState = taskStates[task.id];
+              const isCountingDown = taskState?.status === 'countdown';
+              const isClaimable = taskState?.status === 'claimable';
+
+              return (
+                <div
+                  key={task.id}
+                  className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 ${
+                    task.completed ? 'opacity-50' : ''
+                  }`}
+                  style={{
+                    background: task.completed
+                      ? 'rgba(34,197,94,0.03)'
+                      : isCountingDown
+                        ? 'rgba(59,130,246,0.05)'
+                        : 'linear-gradient(145deg, rgba(8,12,24,0.6), rgba(15,27,54,0.4))',
+                    borderColor: task.completed
+                      ? 'rgba(34,197,94,0.12)'
+                      : isCountingDown
+                        ? 'rgba(59,130,246,0.2)'
+                        : 'rgba(59,130,246,0.08)',
+                  }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold ${task.completed ? 'text-muted-foreground line-through' : 'text-white'}`}>
+                      {task.title}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/50 truncate">{task.description}</p>
+                    <div className="flex items-center gap-2.5 mt-1.5">
+                      <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                        style={{ background: 'rgba(59,130,246,0.1)', color: '#60A5FA' }}
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    )}
+                        +{task.nxrReward} NXR
+                      </span>
+                      <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                        style={{ background: 'rgba(245,158,11,0.1)', color: '#F59E0B' }}
+                      >
+                        +${task.vaultReward.toFixed(2)} Vault
+                      </span>
+                    </div>
+                  </div>
+
+                  {task.completed ? (
+                    <CheckCircle2 className="w-6 h-6 text-green-500/60 flex-shrink-0" />
+                  ) : isClaimable ? (
                     <Button
                       size="sm"
-                      onClick={() => handleCompleteTask(task.id)}
+                      onClick={() => handleClaimTask(task.id)}
                       disabled={completeTask.isPending}
-                      className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs px-3 h-8 font-bold rounded-lg"
+                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-4 h-8 font-bold rounded-lg animate-pulse"
+                      style={{ boxShadow: '0 0 15px rgba(34,197,94,0.3)' }}
+                    >
+                      Claim
+                    </Button>
+                  ) : isCountingDown ? (
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <Clock className="w-3.5 h-3.5 text-[#3B82F6] animate-pulse" />
+                      <span className="text-xs font-bold text-[#3B82F6]">{taskState?.countdown}s</span>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => handleVisitTask(task)}
+                      className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs px-4 h-8 font-bold rounded-lg"
                     >
                       Go
                     </Button>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </motion.div>

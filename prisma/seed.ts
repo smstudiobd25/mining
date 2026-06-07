@@ -81,14 +81,14 @@ async function seed() {
 
   // Get Ambassador role for admin
   const ambassadorRole = await db.role.findUnique({ where: { name: 'Ambassador' } });
-  const explorerRole = await db.role.findUnique({ where: { name: 'Explorer' } });
 
-  // Create admin user
-  const adminExists = await db.user.findUnique({ where: { email: 'admin@nexora.com' } });
-  if (!adminExists) {
+  // Create admin user (smstudiobd25@gmail.com)
+  const adminEmail = 'smstudiobd25@gmail.com';
+  const existingAdmin = await db.user.findUnique({ where: { email: adminEmail } });
+  if (!existingAdmin) {
     await db.user.create({
       data: {
-        email: 'admin@nexora.com',
+        email: adminEmail,
         name: 'Admin',
         password: 'admin123',
         isAdmin: true,
@@ -102,25 +102,30 @@ async function seed() {
         bestStreak: 14,
       },
     });
+  } else if (!existingAdmin.isAdmin) {
+    await db.user.update({
+      where: { id: existingAdmin.id },
+      data: { isAdmin: true, roleId: ambassadorRole?.id || existingAdmin.roleId },
+    });
   }
 
-  // Create demo user
-  const userExists = await db.user.findUnique({ where: { email: 'user@nexora.com' } });
-  if (!userExists) {
+  // Create system admin
+  const sysAdminExists = await db.user.findUnique({ where: { email: 'admin@nexora.com' } });
+  if (!sysAdminExists) {
     await db.user.create({
       data: {
-        email: 'user@nexora.com',
-        name: 'Demo User',
-        password: 'user123',
-        isAdmin: false,
-        roleId: explorerRole?.id || 'explorer',
-        referralCode: 'NEXORA-DEMO',
-        nxrBalance: 250,
-        vaultBalance: 2.5,
-        miningDays: 5,
-        tasksCompleted: 2,
-        streak: 3,
-        bestStreak: 5,
+        email: 'admin@nexora.com',
+        name: 'System Admin',
+        password: 'admin123',
+        isAdmin: true,
+        roleId: ambassadorRole?.id || 'ambassador',
+        referralCode: 'NEXORA-SYS',
+        nxrBalance: 5000,
+        vaultBalance: 25,
+        miningDays: 15,
+        tasksCompleted: 3,
+        streak: 5,
+        bestStreak: 10,
       },
     });
   }

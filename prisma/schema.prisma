@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -106,13 +106,14 @@ model Task {
 }
 
 model TaskCompletion {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   taskId      String
-  completedAt DateTime @default(now())
+  visitedAt   DateTime?
+  completedAt DateTime  @default(now())
 
-  user        User     @relation(fields: [userId], references: [id])
-  task        Task     @relation(fields: [taskId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+  task        Task      @relation(fields: [taskId], references: [id])
 
   @@unique([userId, taskId])
   @@map("task_completions")

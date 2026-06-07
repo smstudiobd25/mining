@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     });
 
     const completedIds = new Set(completions.map((c) => c.taskId));
+    const visitedMap = new Map(completions.map((c) => [c.taskId, c.visitedAt]));
     const taskMultiplierSetting = await db.setting.findUnique({ where: { key: 'task_multiplier' } });
     const vaultMultiplierSetting = await db.setting.findUnique({ where: { key: 'vault_multiplier' } });
     const taskMultiplier = taskMultiplierSetting ? parseFloat(taskMultiplierSetting.value) : 1;
@@ -28,11 +29,12 @@ export async function GET(req: NextRequest) {
       nxrReward: Math.round(task.nxrReward * taskMultiplier * 100) / 100,
       vaultReward: Math.round(task.vaultReward * vaultMultiplier * 100) / 100,
       completed: completedIds.has(task.id),
+      visitedAt: visitedMap.get(task.id) || null,
     }));
 
     return NextResponse.json({
       tasks: tasksWithStatus,
-      completedCount: completions.length,
+      completedCount: completions.filter((c) => c.completedAt).length,
       totalCount: tasks.length,
     });
   } catch (error) {
@@ -41,7 +43,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+// Visit a task (opens the link, records visit time)
+export async function PUT(req: NextRequest) {
   try {
     const userId = req.headers.get('x-user-id');
     if (!userId) {
@@ -65,8 +68,67 @@ export async function POST(req: NextRequest) {
       where: { userId_taskId: { userId, taskId } },
     });
 
-    if (existing) {
+    if (existing && existing.completedAt) {
       return NextResponse.json({ error: 'Task already completed' }, { status: 400 });
+    }
+
+    // Record visit time (upsert so we don't duplicate)
+    await db.taskCompletion.upsert({
+      where: { userId_taskId: { userId, taskId } },
+      update: { visitedAt: new Date() },
+      create: { userId, taskId, visitedAt: new Date() },
+    });
+
+    return NextResponse.json({ success: true, visitedAt: new Date().toISOString() });
+  } catch (error) {
+    console.error('Tasks PUT (visit) error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// Claim/Complete a task (after visiting + waiting)
+export async function POST(req: NextRequest) {
+  try {
+    const userId = req.headers.get('x-user-id');
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { taskId } = body;
+
+    if (!taskId) {
+      return NextResponse.json({ error: 'Task ID is required' }, { status: 400 });
+    }
+
+    const task = await db.task.findUnique({ where: { id: taskId } });
+    if (!task || !task.isActive) {
+      return NextResponse.json({ error: 'Task not found or inactive' }, { status: 404 });
+    }
+
+    // Check if already fully completed
+    const existing = await db.taskCompletion.findUnique({
+      where: { userId_taskId: { userId, taskId } },
+    });
+
+    if (existing && existing.completedAt) {
+      return NextResponse.json({ error: 'Task already completed' }, { status: 400 });
+    }
+
+    // Anti-cheat: Check if user visited the link at least 10 seconds ago
+    if (!existing || !existing.visitedAt) {
+      return NextResponse.json({ error: 'Please visit the link first before claiming' }, { status: 400 });
+    }
+
+    const visitedTime = new Date(existing.visitedAt).getTime();
+    const now = Date.now();
+    const elapsed = (now - visitedTime) / 1000; // seconds
+
+    if (elapsed < 10) {
+      return NextResponse.json({
+        error: `Please wait ${Math.ceil(10 - elapsed)} more seconds before claiming`,
+        remainingSeconds: Math.ceil(10 - elapsed),
+      }, { status: 400 });
     }
 
     // Get multipliers
@@ -78,9 +140,10 @@ export async function POST(req: NextRequest) {
     const nxrReward = Math.round(task.nxrReward * taskMultiplier * 100) / 100;
     const vaultReward = Math.round(task.vaultReward * vaultMultiplier * 100) / 100;
 
-    // Complete the task
-    await db.taskCompletion.create({
-      data: { userId, taskId },
+    // Complete the task (update existing record with completedAt)
+    await db.taskCompletion.update({
+      where: { userId_taskId: { userId, taskId } },
+      data: { completedAt: new Date() },
     });
 
     // Update user balance

@@ -5,6 +5,7 @@ export async function GET(req: NextRequest) {
   try {
     const results: string[] = [];
 
+    // 1. Create roles
     const roles = [
       { name: 'Explorer', minReferrals: 0, miningBoost: 1.0, color: '#94A3B8', icon: '🧭' },
       { name: 'Builder', minReferrals: 5, miningBoost: 1.2, color: '#2563EB', icon: '🔨' },
@@ -15,8 +16,9 @@ export async function GET(req: NextRequest) {
     for (const role of roles) {
       await db.role.upsert({ where: { name: role.name }, update: {}, create: role });
     }
-    results.push('Roles created (5)');
+    results.push('Roles created/verified (5)');
 
+    // 2. Create settings
     const settings = [
       { key: 'base_mining_reward', value: '50', description: 'Base NXR reward per mining session', category: 'mining' },
       { key: 'mining_duration_hours', value: '24', description: 'Mining session duration in hours', category: 'mining' },
@@ -33,8 +35,9 @@ export async function GET(req: NextRequest) {
     for (const setting of settings) {
       await db.setting.upsert({ where: { key: setting.key }, update: { value: setting.value }, create: setting });
     }
-    results.push('Settings created (11)');
+    results.push('Settings created/verified (11)');
 
+    // 3. Create tasks
     const tasks = [
       { title: 'Follow on X', description: 'Follow Nexora on X (Twitter)', type: 'social', url: 'https://x.com/nexora', nxrReward: 20, vaultReward: 0.02, sortOrder: 1 },
       { title: 'Like Post on X', description: 'Like our latest post on X', type: 'social', url: 'https://x.com/nexora', nxrReward: 15, vaultReward: 0.01, sortOrder: 2 },
@@ -47,18 +50,20 @@ export async function GET(req: NextRequest) {
       const existing = await db.task.findFirst({ where: { title: task.title } });
       if (!existing) { await db.task.create({ data: task }); }
     }
-    results.push('Tasks created (6)');
+    results.push('Tasks created/verified (6)');
 
+    // 4. Create ads
     const ads = [
-      { position: 'home_banner', adType: 'banner', title: 'Welcome to Nexora', htmlCode: '<div style="background:linear-gradient(135deg,#2563EB,#7C3AED);padding:16px;border-radius:12px;text-align:center;color:white;font-weight:bold;">Start Mining & Earn NXR Rewards!</div>', isActive: true },
-      { position: 'earn_banner', adType: 'banner', title: 'Complete Tasks', htmlCode: '<div style="background:linear-gradient(135deg,#F59E0B,#EF4444);padding:16px;border-radius:12px;text-align:center;color:white;font-weight:bold;">Complete tasks to earn more NXR!</div>', isActive: true },
+      { position: 'home_banner', adType: 'banner', title: 'Welcome to Nexora', htmlCode: '<div style="background:linear-gradient(135deg,#2563EB,#7C3AED);padding:16px;border-radius:12px;text-align:center;color:white;font-weight:bold;">🚀 Start Mining &amp; Earn NXR Rewards!</div>', isActive: true },
+      { position: 'earn_banner', adType: 'banner', title: 'Complete Tasks', htmlCode: '<div style="background:linear-gradient(135deg,#F59E0B,#EF4444);padding:16px;border-radius:12px;text-align:center;color:white;font-weight:bold;">💰 Complete tasks to earn more NXR!</div>', isActive: true },
     ];
     for (const ad of ads) {
       const existing = await db.adPlacement.findFirst({ where: { position: ad.position } });
       if (!existing) { await db.adPlacement.create({ data: ad }); }
     }
-    results.push('Ads created (2)');
+    results.push('Ads created/verified (2)');
 
+    // 5. Create announcements
     const announcements = [
       { title: 'Welcome to Nexora Network!', message: 'Start mining NXR tokens today. Complete tasks, refer friends, and earn rewards!', isImportant: true, isActive: true },
       { title: 'Mining is Live!', message: 'Your 24-hour mining cycle is ready. Tap Start Mining to begin earning NXR!', isImportant: false, isActive: true },
@@ -68,7 +73,66 @@ export async function GET(req: NextRequest) {
       const existing = await db.announcement.findFirst({ where: { title: ann.title } });
       if (!existing) { await db.announcement.create({ data: ann }); }
     }
-    results.push('Announcements created (3)');
+    results.push('Announcements created/verified (3)');
+
+    // 6. Create admin user (smstudiobd25@gmail.com)
+    const ambassadorRole = await db.role.findUnique({ where: { name: 'Ambassador' } });
+    const adminEmail = 'smstudiobd25@gmail.com';
+    const existingAdmin = await db.user.findUnique({ where: { email: adminEmail } });
+
+    if (existingAdmin) {
+      // Ensure admin flag is set
+      if (!existingAdmin.isAdmin) {
+        await db.user.update({
+          where: { id: existingAdmin.id },
+          data: { isAdmin: true, roleId: ambassadorRole?.id || existingAdmin.roleId },
+        });
+      }
+      results.push('Admin user verified (smstudiobd25@gmail.com)');
+    } else {
+      // Create admin user
+      const adminCode = 'NEXORA-ADMIN-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      await db.user.create({
+        data: {
+          email: adminEmail,
+          name: 'Admin',
+          password: 'admin123',
+          isAdmin: true,
+          roleId: ambassadorRole?.id || 'ambassador',
+          referralCode: adminCode,
+          nxrBalance: 10000,
+          vaultBalance: 50,
+          miningDays: 30,
+          tasksCompleted: 6,
+          streak: 7,
+          bestStreak: 14,
+        },
+      });
+      results.push('Admin user created (smstudiobd25@gmail.com / admin123)');
+    }
+
+    // 7. Also ensure admin@nexora.com admin exists
+    const existingAdmin2 = await db.user.findUnique({ where: { email: 'admin@nexora.com' } });
+    if (!existingAdmin2) {
+      const admin2Code = 'NEXORA-SYS-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      await db.user.create({
+        data: {
+          email: 'admin@nexora.com',
+          name: 'System Admin',
+          password: 'admin123',
+          isAdmin: true,
+          roleId: ambassadorRole?.id || 'ambassador',
+          referralCode: admin2Code,
+          nxrBalance: 5000,
+          vaultBalance: 25,
+          miningDays: 15,
+          tasksCompleted: 3,
+          streak: 5,
+          bestStreak: 10,
+        },
+      });
+      results.push('System admin created (admin@nexora.com / admin123)');
+    }
 
     const counts = {
       roles: await db.role.count(),
