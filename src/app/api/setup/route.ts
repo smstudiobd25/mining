@@ -1,9 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { db } from '@/lib/db';
+
+const execAsync = promisify(exec);
 
 export async function GET(req: NextRequest) {
   try {
     const results: string[] = [];
+
+    // Step 0: Push schema to database (create tables if they don't exist)
+    try {
+      const { stdout, stderr } = await execAsync('npx prisma db push --skip-generate', {
+        timeout: 30000,
+        env: { ...process.env },
+      });
+      results.push('Schema pushed to database');
+      console.log('prisma db push stdout:', stdout);
+      if (stderr) console.log('prisma db push stderr:', stderr);
+    } catch (pushError: any) {
+      console.error('Schema push error:', pushError.message);
+      results.push('Schema push warning: ' + pushError.message.substring(0, 100));
+      // Continue anyway - tables might already exist
+    }
 
     // 1. Create roles
     const roles = [
@@ -75,7 +94,7 @@ export async function GET(req: NextRequest) {
     }
     results.push('Announcements created/verified (3)');
 
-    // 6. Create admin user (smstudiobd25@gmail.com)
+    // 6. Create/verify admin user (smstudiobd25@gmail.com)
     const ambassadorRole = await db.role.findUnique({ where: { name: 'Ambassador' } });
     const adminEmail = 'smstudiobd25@gmail.com';
     const existingAdmin = await db.user.findUnique({ where: { email: adminEmail } });
@@ -132,6 +151,8 @@ export async function GET(req: NextRequest) {
         },
       });
       results.push('System admin created (admin@nexora.com / admin123)');
+    } else {
+      results.push('System admin verified (admin@nexora.com)');
     }
 
     const counts = {
@@ -146,6 +167,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, message: 'Database setup complete!', results, counts });
   } catch (error: any) {
     console.error('Setup error:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Setup failed' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message || 'Setup failed',
+      hint: 'Make sure DATABASE_URL is set in your Vercel environment variables. Use Neon, Supabase, or any PostgreSQL provider. Format: postgresql://user:password@host:5432/dbname?sslmode=require'
+    }, { status: 500 });
   }
 }
