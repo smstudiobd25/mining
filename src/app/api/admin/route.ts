@@ -147,14 +147,15 @@ export async function POST(req: NextRequest) {
 
     if (section === 'tasks') {
       if (action === 'create') {
-        const task = await db.task.create({ data });
+        const { notifyUsers, ...taskData } = data;
+        const task = await db.task.create({ data: taskData });
         // Send notifications to all users about the new task
-        if (data.notifyUsers !== false) {
+        if (notifyUsers !== false) {
           const users = await db.user.findMany({ where: { isBanned: false }, select: { id: true } });
           await db.notification.createMany({
             data: users.map((u) => ({
               userId: u.id,
-              title: `New Task: ${task.title} 🎯`,
+              title: `New Task: ${task.title}`,
               message: `A new task is available! Earn ${task.nxrReward} NXR + $${task.vaultReward} Vault reward.`,
               type: 'task',
             })),
@@ -182,9 +183,11 @@ export async function POST(req: NextRequest) {
 
     if (section === 'announcements') {
       if (action === 'create') {
-        const announcement = await db.announcement.create({ data });
+        // Separate notifyAll from announcement data (not a DB field)
+        const { notifyAll, ...annData } = data;
+        const announcement = await db.announcement.create({ data: annData });
         // Optionally notify all users
-        if (data.notifyAll) {
+        if (notifyAll) {
           const users = await db.user.findMany({ where: { isBanned: false }, select: { id: true } });
           await db.notification.createMany({
             data: users.map((u) => ({
